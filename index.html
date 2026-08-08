@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prime Time × Munchilicious — Team Event</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15111f; --ink2:#1b1529; --surface:#221a34; --raised:#2c2242; --line:#3a2e56; --lineL:#4c3d70;
+  --text:#f4eeff; --muted:#a498c4; --dim:#6f6291;
+  --amber:#ffd166; --amberD:#e0a92e; --accentInk:#ffd166;
+  --mint:#06d6a0; --mintD:#04a87e; --mintInk:#06d6a0;
+  --rose:#ef476f; --roseInk:#ff8fa5;
+  --onAccent:#221a34;
+  --court:#1d4f7a; --courtAlt:#17608a; --kitchen:#c2632f; --courtLine:rgba(255,255,255,.72);
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --r:14px;
+}
+html[data-theme="light"]{
+  --ink:#ffffff; --ink2:#f7f5fb; --surface:#ffffff; --raised:#f2eff8; --line:#e4dff0; --lineL:#cec5e2;
+  --text:#191330; --muted:#5d5480; --dim:#8b82a8;
+  --amber:#ffc94d; --amberD:#e9ac1f; --accentInk:#8a6100;
+  --mint:#12c79a; --mintD:#0a9c77; --mintInk:#04795c;
+  --rose:#e03a63; --roseInk:#b81f45;
+  --onAccent:#2a2018;
+  --court:#2f74a8; --courtAlt:#2b86ba; --kitchen:#d1793f; --courtLine:rgba(255,255,255,.9);
+  --shadow:0 8px 22px rgba(40,25,80,.10);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--ink);color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  min-height:100vh;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+html[data-theme="dark"] body{background:
+  radial-gradient(1100px 520px at 88% -8%, rgba(6,214,160,.07), transparent 60%),
+  radial-gradient(900px 480px at -8% 4%, rgba(255,209,102,.06), transparent 58%), var(--ink)}
+.anton{font-family:'Anton','Arial Narrow',Impact,sans-serif;font-weight:400}
+.wrap{max-width:1060px;margin:0 auto;padding:0 15px 120px}
+
+header{position:sticky;top:0;z-index:60;background:var(--ink2);border-bottom:1px solid var(--line)}
+.hd{max-width:1060px;margin:0 auto;padding:11px 15px;display:flex;align-items:center;gap:10px}
+.mark{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--amber),var(--mint));color:#221a34;font-family:'Anton',sans-serif;font-size:20px}
+.hd h1{margin:0;font-size:15px;font-weight:800;line-height:1.1}
+.hd .sub{font-size:9.5px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase;margin-top:3px}
+.hd .spacer{margin-left:auto}
+.iconbtn{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 9px;cursor:pointer;
+  color:var(--muted);display:flex;align-items:center;gap:4px;font-family:inherit;font-size:10px;font-weight:800}
+.iconbtn:hover{color:var(--text);border-color:var(--lineL)}
+.iconbtn.on{background:color-mix(in srgb,var(--mint) 16%,transparent);border-color:var(--mint);color:var(--mintInk)}
+
+nav.tabs{position:sticky;bottom:0;z-index:60;background:var(--ink2);border-top:1px solid var(--line)}
+.tabs-in{max-width:1060px;margin:0 auto;display:flex;justify-content:space-around;padding:6px 0 env(safe-area-inset-bottom,7px)}
+.tabBtn{flex:1;background:none;border:none;color:var(--dim);font-family:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px}
+.tabBtn svg{width:20px;height:20px}
+.tabBtn span{font-size:9px;font-weight:800}
+.tabBtn.active{color:var(--accentInk)}
+
+h2.sec{font-family:'Anton',sans-serif;font-size:27px;margin:20px 0 3px;text-transform:uppercase}
+.lead{color:var(--muted);font-size:12.5px;margin:0 0 15px;line-height:1.55}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;cursor:pointer;
+  border-radius:10px;font-weight:800;font-size:12.5px;padding:10px 16px;border:1px solid var(--line);
+  background:transparent;color:var(--muted)}
+.btn:hover{border-color:var(--lineL);color:var(--text)}
+.btn.primary{background:linear-gradient(135deg,var(--amber),var(--amberD));color:var(--onAccent);border:none}
+.btn.sm{padding:6px 12px;font-size:11px;border-radius:8px}
+.btn.ghost{background:var(--raised)}
+.btn.danger{color:var(--roseInk);border-color:transparent;background:color-mix(in srgb,var(--rose) 14%,transparent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.muted{color:var(--muted)}.dim{color:var(--dim)}
+.label{font-size:9px;text-transform:uppercase;letter-spacing:.13em;color:var(--dim);font-weight:800}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:800;white-space:nowrap}
+.tdot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.table-scroll{overflow-x:auto}
+
+/* ---------- referee console ---------- */
+.refhead{display:flex;align-items:center;gap:10px;margin:16px 0 12px}
+.scorestrip{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:11px}
+.sTeam{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;position:relative;overflow:hidden}
+.sTeam .stripe{position:absolute;top:0;left:0;right:0;height:3px}
+.sTeam .nm{font-size:11.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sTeam .num{font-family:'Anton',sans-serif;font-size:52px;line-height:1;margin-top:2px}
+.sTeam.right{text-align:right}
+.combinedBox{text-align:center;padding:0 4px}
+.combinedBox .cv{font-family:'Anton',sans-serif;font-size:30px;color:var(--mintInk);line-height:1}
+.combinedBox .cl{font-size:8px;color:var(--dim);font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+
+.court{position:relative;display:grid;grid-template-columns:1fr 6px 1fr;border-radius:16px;overflow:hidden;
+  box-shadow:var(--shadow);border:3px solid var(--courtLine);margin-bottom:11px;user-select:none}
+.half{display:grid;grid-template-rows:1fr 1fr;background:var(--court);position:relative}
+.half.b{background:var(--courtAlt)}
+.net{background:repeating-linear-gradient(0deg,rgba(255,255,255,.95) 0 5px,rgba(255,255,255,.35) 5px 10px)}
+.kitchen{position:absolute;top:0;bottom:0;width:19%;background:color-mix(in srgb,var(--kitchen) 78%,transparent);z-index:1}
+.half.a .kitchen{right:0;border-left:2px solid var(--courtLine)}
+.half.b .kitchen{left:0;border-right:2px solid var(--courtLine)}
+.box{position:relative;z-index:2;padding:14px 13px 24px;min-height:104px;display:flex;flex-direction:column;
+  justify-content:center;gap:5px;cursor:pointer}
+.half .box:first-child{border-bottom:2px solid var(--courtLine)}
+.box:hover{background:rgba(255,255,255,.09)}
+.box:active{background:rgba(255,255,255,.17)}
+.box.locked{cursor:default}.box.locked:hover{background:transparent}
+.ball{display:inline-flex;flex-shrink:0}
+.ball svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.servetag{font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff59d;margin-top:2px}
+.tossbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:10px 13px;margin-bottom:11px}
+.posTag{font-size:8.5px;font-weight:800;letter-spacing:.11em;color:rgba(255,255,255,.75);text-transform:uppercase}
+.pSlot{display:flex;align-items:center;gap:6px;min-width:0}
+.pSlot .sl{font-family:'Anton',sans-serif;font-size:13px;color:#ffe6a3;flex-shrink:0}
+.pSlot .pn{font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.5);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pPool{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.24);color:#fff;flex-shrink:0}
+.box.justin{box-shadow:inset 0 0 0 3px var(--mint)}
+.taphint{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:8.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;
+  color:rgba(255,255,255,.6);letter-spacing:.07em;text-transform:uppercase;z-index:3;pointer-events:none}
+
+.ctrls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.ctrlrow{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:9px}
+.ctrlrow .tl{flex:1;min-width:0;font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--raised);
+  color:var(--text);font-family:'Anton',sans-serif;font-size:19px;cursor:pointer;flex-shrink:0}
+.rbtn.plus{border:none}
+.rbtn:disabled{opacity:.35;cursor:not-allowed}
+
+.rotwrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:11px}
+.rothead{display:flex;align-items:baseline;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+.rothead .big{font-family:'Anton',sans-serif;font-size:21px;color:var(--accentInk)}
+.ladder{display:flex;gap:3px}
+.gate{flex:1;min-width:0}
+.gate .bar{height:32px;border-radius:7px;background:var(--raised);border:1px solid var(--line);overflow:hidden;position:relative}
+.gate .fill{position:absolute;inset:0;width:0;background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 55%,transparent),var(--amber));transition:width .25s}
+.gate.done .fill{width:100%}
+.gate.cur .bar{border-color:var(--amber);box-shadow:0 0 0 2px color-mix(in srgb,var(--amber) 22%,transparent)}
+.gate .pair{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--muted);z-index:2}
+.gate.done .pair{color:var(--onAccent)}
+.gate.cur .pair{color:var(--text)}
+.gate .tick{text-align:center;font-size:9px;color:var(--dim);font-weight:800;margin-top:4px}
+.gate.cur .tick{color:var(--accentInk)}
+.submodal{position:fixed;inset:0;z-index:200;background:rgba(10,6,20,.72);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:18px}
+.subcard{background:var(--surface);border:2px solid var(--mint);border-radius:20px;padding:22px;max-width:460px;width:100%;
+  box-shadow:0 24px 70px rgba(0,0,0,.5);text-align:center}
+.subgate{font-family:'Anton',sans-serif;font-size:23px;color:var(--mintInk);text-transform:uppercase}
+.subcard.ends{border-color:var(--amber)}
+.subgate.ends{color:var(--accentInk)}
+.btn.mintbtn.amberbtn{background:linear-gradient(135deg,var(--amber),var(--amberD));color:var(--onAccent)}
+.subpair{font-size:12.5px;font-weight:800;color:var(--muted);margin:2px 0 14px}
+.subrow{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px;text-align:left}
+.subteam{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:7px}
+.subswap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13px;font-weight:700}
+.subswap .tag{font-size:8px;font-weight:800;letter-spacing:.1em;padding:2px 5px;border-radius:4px;margin-right:5px}
+.subswap .off{color:var(--dim)}
+.subswap .off .tag{background:color-mix(in srgb,var(--rose) 18%,transparent);color:var(--roseInk)}
+.subswap .on{color:var(--text)}
+.subswap .on .tag{background:color-mix(in srgb,var(--mint) 20%,transparent);color:var(--mintInk)}
+.subswap .on b{color:var(--mintInk)}
+.subswap .arrow{color:var(--dim);display:flex}
+.btn.mintbtn{width:100%;margin-top:6px;background:linear-gradient(135deg,var(--mint),var(--mintD));color:#08251d;
+  border:none;padding:14px;font-size:14px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:inherit;font-weight:800;cursor:pointer}
+.subnote{font-size:10.5px;color:var(--dim);font-weight:700;margin-top:9px}
+.alertbar{border-radius:12px;padding:12px 14px;font-weight:800;font-size:12.5px;margin-bottom:10px;
+  display:flex;align-items:center;gap:9px;animation:pulse 1.3s ease-in-out infinite}
+.alertbar.amber{background:color-mix(in srgb,var(--amber) 18%,transparent);border:1px solid var(--amber);color:var(--accentInk)}
+.alertbar.gold{background:color-mix(in srgb,var(--rose) 15%,transparent);border:1px solid var(--rose);color:var(--roseInk)}
+.endsnote{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:10.5px;font-weight:800;
+  color:var(--dim);margin:-4px 0 11px;flex-wrap:wrap}
+.endsnote>span{display:flex;align-items:center;gap:6px}
+.subalert{margin-top:10px;border-radius:11px;padding:12px 13px;font-weight:800;font-size:12.5px;line-height:1.55;
+  background:color-mix(in srgb,var(--mint) 13%,transparent);border:1px solid var(--mint);color:var(--mintInk);
+  display:flex;align-items:flex-start;gap:9px;animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.countdown{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.countdown b{color:var(--accentInk);font-family:'Anton',sans-serif;font-size:17px}
+.winbanner{background:color-mix(in srgb,var(--amber) 15%,transparent);border:1px solid var(--amber);
+  border-radius:16px;padding:18px;text-align:center;margin-bottom:12px}
+.winbanner .wn{font-family:'Anton',sans-serif;font-size:26px;margin-top:4px}
+
+.mrow{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:9px;cursor:pointer}
+.mrow:hover{border-color:var(--lineL)}
+.mrow .side{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.mrow .side.b{flex-direction:row-reverse;text-align:right}
+.mrow .nm{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .sc{font-family:'Anton',sans-serif;font-size:21px;min-width:32px;text-align:center}
+.roundtag{font-size:9.5px;color:var(--dim);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px}
+
+.team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+.rcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.rhead{padding:12px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line)}
+.rhead .tn{font-family:'Anton',sans-serif;font-size:16px}
+.rrow{display:flex;align-items:center;gap:9px;padding:7px 14px;border-bottom:1px solid var(--line)}
+.rrow:last-child{border-bottom:none}
+.rrow .nm{font-size:12.5px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pool{font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:5px;flex-shrink:0;width:26px;text-align:center}
+.pool.C{background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--accentInk)}
+.pool.P1{background:rgba(107,168,255,.2);color:#2a6fc9}
+.pool.P2{background:rgba(199,146,234,.2);color:#7b3fa8}
+.pool.G{background:rgba(244,99,168,.2);color:#c02a78}
+html[data-theme="dark"] .pool.P1{color:#9cc6ff}
+html[data-theme="dark"] .pool.P2{color:#d7b4f2}
+html[data-theme="dark"] .pool.G{color:#f8c4dd}
+.rname{flex:1;min-width:0;padding:7px 9px;background:var(--ink2);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);font-size:12.5px;font-family:inherit;outline:none}
+.rname:focus{border-color:var(--amber)}
+
+.lu-row{display:flex;align-items:center;gap:9px;padding:6px 0}
+.lu-slot{font-family:'Anton',sans-serif;font-size:15px;color:var(--accentInk);width:26px;flex-shrink:0}
+select.lu{flex:1;min-width:0;padding:9px 10px;background:var(--ink2);border:1px solid var(--line);border-radius:9px;
+  color:var(--text);font-size:12.5px;font-family:inherit;outline:none;cursor:pointer}
+.valbox{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:11.5px;line-height:1.5}
+.valbox.ok{background:color-mix(in srgb,var(--mint) 11%,transparent);border:1px solid color-mix(in srgb,var(--mint) 40%,transparent);color:var(--mintInk)}
+.valbox.warn{background:color-mix(in srgb,var(--rose) 11%,transparent);border:1px solid color-mix(in srgb,var(--rose) 40%,transparent);color:var(--roseInk)}
+
+table.stand{width:100%;border-collapse:collapse}
+table.stand th{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);font-weight:800;
+  text-align:center;padding:9px 5px;border-bottom:1px solid var(--line)}
+table.stand th.l,table.stand td.l{text-align:left}
+table.stand td{padding:11px 5px;text-align:center;border-bottom:1px solid var(--line);font-size:12.5px}
+table.stand tr:last-child td{border-bottom:none}
+.rank{width:25px;height:25px;border-radius:8px;display:inline-grid;place-items:center;font-family:'Anton',sans-serif;font-size:13px}
+.tname{font-weight:700;display:flex;align-items:center;gap:8px}
+.pts{font-family:'Anton',sans-serif;font-size:18px}
+
+.rule-block{margin-bottom:16px}
+.rule-block h3{font-family:'Anton',sans-serif;font-size:15px;margin:0 0 7px;color:var(--accentInk);text-transform:uppercase}
+.rule-block ul{margin:0;padding-left:17px;color:var(--muted);font-size:12.5px;line-height:1.75}
+.rule-block li b{color:var(--text)}
+.seq{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.seqitem{background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:11px;font-weight:700}
+.seqitem b{color:var(--accentInk);font-family:'Anton',sans-serif}
+.empty{text-align:center;padding:34px 16px;color:var(--dim);font-size:12.5px}
+.empty .ic{font-size:30px;opacity:.35;margin-bottom:8px}
+
+@media(max-width:680px){
+  .team-grid{grid-template-columns:1fr}
+  .ctrls{grid-template-columns:1fr}
+  .sTeam .num{font-size:40px}
+  .box{min-height:96px;padding:11px 9px 22px}
+  .kitchen{width:14%}
+  .pSlot .pn{font-size:13px}
+  .gate .pair{font-size:8px}
+  .subcard{padding:18px 15px}
+  .subgate{font-size:19px}
+  .subswap{flex-direction:column;align-items:flex-start;gap:6px}
+  .subswap .arrow{transform:rotate(90deg);margin-left:14px}
+  .btn.mintbtn{font-size:13px;padding:13px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="mark">PT</div>
+  <div><h1>Prime Time × Munchilicious</h1><div class="sub">Team Event · Chitrakoot · 9 Aug</div></div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="themeBtn"></button>
+  <button class="iconbtn" id="lockBtn"></button>
+</div></header>
+
+<div class="wrap" id="app"></div>
+<nav class="tabs"><div class="tabs-in" id="tabbar"></div></nav>
+
+<script>
+/* ==================================================================
+   PRIME TIME x MUNCHILICIOUS - Team Event
+   Single file, works offline, auto-saves to this browser
+   ================================================================== */
+
+const TARGET=51, GATE=15, SQUAD=6;
+const POOLS=[{key:'C',n:1},{key:'P1',n:2},{key:'P2',n:2},{key:'G',n:1}];
+
+// Rosters from the team-list poster; order follows the DRAWS poster
+// (first four = Group 1, last four = Group 2). In a match, A1-A6 is the player rotation order.
+const DEFAULT_TEAMS=[
+ // Group 1
+ {id:'t1',grp:'1',pos:1,name:"Rao's Paltan",    hex:'#ffd166',ink:'#a06a00',captain:'Tarang',
+  p1:['Aum','Devang'],     p2:['Veer','Saurabh Rathi'], g:'Pooja'},
+ {id:'t2',grp:'1',pos:2,name:'Munchilicious',   hex:'#ef476f',ink:'#b81f45',captain:'Himanshu',
+  p1:['Ravi','Alok'],      p2:['Gulshan','Aditya'],     g:'Divya'},
+ {id:'t3',grp:'1',pos:3,name:'Pickleboys',      hex:'#6ba8ff',ink:'#1f5fb8',captain:'Arsh',
+  p1:['Ishaan','Azim'],    p2:['Ayush','Harshil'],      g:'Karishma'},
+ {id:'t4',grp:'1',pos:4,name:'Dabbang Dinkers', hex:'#06d6a0',ink:'#06795c',captain:'Rohan',
+  p1:['Nirbhay','Justin'], p2:['Sarthak','Kunal D'],    g:'Romi'},
+ // Group 2
+ {id:'t5',grp:'2',pos:1,name:'Airavat',         hex:'#ff9f45',ink:'#a85a00',captain:'Udipt',
+  p1:['Shivam','Aman'],    p2:['Narry','Rahul'],        g:'Erin'},
+ {id:'t6',grp:'2',pos:2,name:"Leo's SIX",       hex:'#f4a3c8',ink:'#b13a72',captain:'Aakash',
+  p1:['Dev','Nadeem'],     p2:['Hitesh','Kaustubh'],    g:'Kavita'},
+ {id:'t7',grp:'2',pos:3,name:'Pickleboss',      hex:'#4dd4c8',ink:'#10786f',captain:'Rajesh',
+  p1:['Karan','Amresh'],   p2:['Faisal','Keyur'],       g:'Anjali'},
+ {id:'t8',grp:'2',pos:4,name:'Dink Floyd',      hex:'#c792ea',ink:'#7b3fa8',captain:'Amit',
+  p1:['Rewanth','Deepak'], p2:['Rushabh','Kunal'],      g:'Meghna'},
+];
+function freshTeams(){
+  return DEFAULT_TEAMS.map(t=>{
+    const names={C:[t.captain],P1:t.p1,P2:t.p2,G:[t.g]}, players=[];
+    POOLS.forEach(p=>{for(let i=0;i<p.n;i++)
+      players.push({id:t.id+'_'+p.key+(i+1),name:names[p.key][i]||'',pool:p.key});});
+    return Object.assign({},t,{players});
+  });
+}
+let TEAMS=freshTeams();
+const teamById=id=>TEAMS.find(t=>t.id===id);
+const playerById=id=>{for(const t of TEAMS){const p=t.players.find(x=>x.id===id);if(p)return p;}return null;};
+const pName=id=>{const p=playerById(id);return p?(p.name||'—'):'—';};
+const pPool=id=>{const p=playerById(id);return p?p.pool:'';};
+const filled=t=>t.players.filter(p=>p.name.trim()).length;
+const tcol=t=>state.theme==='light'?t.ink:t.hex;
+
+// ---- Rotation engine: the combined score is the clock ----
+const segOf=c=>c<=0?0:Math.floor((c-1)/GATE);
+const curSeg=c=>segOf(c+1);                 // segment the NEXT rally belongs to
+const pairIdx=c=>{const s=curSeg(c)%SQUAD;return [s,(s+1)%SQUAD];};
+const nextGateAt=c=>(Math.floor(c/GATE)+1)*GATE;
+const subDueNow=c=>c>0&&c%GATE===0;
+const pairLabel=c=>pairIdx(c).map(i=>'A'+(i+1)).join(' + ');
+// ---- Court positions + serve, derived from the rally log ----
+// Server serves from the RIGHT when their team's score is EVEN, LEFT when ODD.
+// Serving team wins the rally -> its two players swap sides, same player serves on.
+// Receiving team wins -> side-out, no swap; whoever stands in the parity box serves next.
+// A substitute takes the slot of the player they replace.
+function courtState(m){
+  const fa=!!(m.flip&&m.flip[m.a]), fb=!!(m.flip&&m.flip[m.b]);
+  const slot={}; slot[m.a]={R:fa?1:0,L:fa?0:1}; slot[m.b]={R:fb?1:0,L:fb?0:1};
+  let serving=m.server||'a'; const score={a:0,b:0}; let lastSub=null;
+  (m.log||[]).forEach(w=>{
+    const tid=(w==='a')?m.a:m.b, wasServing=(serving===w);
+    score[w]++;
+    if(wasServing){const s=slot[tid],t=s.R;s.R=s.L;s.L=t;}
+    else serving=w;
+    const c=score.a+score.b;
+    if(c%GATE===0){
+      const seg=c/GATE, leave=((seg-1)%SQUAD+SQUAD)%SQUAD, enter=(seg+1)%SQUAD;
+      [m.a,m.b].forEach(t2=>{const s2=slot[t2];
+        if(s2.R===leave)s2.R=enter; else if(s2.L===leave)s2.L=enter;});
+      lastSub={at:c,leave:leave,enter:enter};
+    }
+  });
+  return {slot:slot,serving:serving,score:score,lastSub:lastSub};
+}
+const servingBox=(cs,key)=>(cs.score[key]%2===0)?'R':'L';
+// A substitution gate that has NOT yet been acknowledged by the referee.
+function subPending(m){
+  if(!lineupReady(m)||isOver(m))return null;
+  const c=scoreOf(m).c;
+  if(c===0||c%GATE!==0)return null;
+  return ((m.acked||[]).indexOf(c)>=0)?null:c;
+}
+// The change-of-ends at SWITCH_AT, until the referee confirms it.
+function endsPending(m){
+  if(!lineupReady(m)||isOver(m))return false;
+  const s=scoreOf(m);
+  return Math.max(s.a,s.b)>=SWITCH_AT && !m.endsAcked;
+}
+// If points are undone below a gate, that gate must be confirmed again.
+function pruneAcks(m){
+  const s=scoreOf(m);
+  m.acked=(m.acked||[]).filter(g=>g<=s.c);
+  if(Math.max(s.a,s.b)<SWITCH_AT) m.endsAcked=false;
+}
+
+// ---- Fixtures: round robin inside each group + one cross-group match, then Final & 3rd place ----
+const RR4=[[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
+const CROSS=[[0,7],[3,4],[1,6],[2,5]];   // Rao's v Dink Floyd, Dabbang v Airavat, Munchi v Pickleboss, Pickleboys v Leo's
+const SWITCH_AT=25;                       // change ends when a team reaches this
+const GOLDEN_AT=50;                       // 50-50 => golden point
+function buildFixtures(){
+  const ms=[]; const mk=(a,b,stage,round,extra)=>{
+    const m={id:'m'+(ms.length+1),a:a,b:b,stage:stage,round:round,lineup:{},flip:{},log:[]};
+    return Object.assign(m,extra||{});};
+  const G=[[0,1,2,3],[4,5,6,7]];
+  G.forEach((idx,gi)=>{RR4.forEach(pr=>
+    ms.push(mk(TEAMS[idx[pr[0]]].id,TEAMS[idx[pr[1]]].id,'league','Group '+(gi+1),{grp:String(gi+1)})));});
+  CROSS.forEach((pr,i)=>ms.push(mk(TEAMS[pr[0]].id,TEAMS[pr[1]].id,'league','Cross-Group Matches',{cross:i+1})));
+  ms.push(mk(null,null,'third','3rd Place Play-off',{slot:'3RD'}));
+  ms.push(mk(null,null,'final','Final',{slot:'F'}));
+  return ms;
+}
+
+const KEY='pt_munch_team_event_v4';
+let state={view:'fixtures',matches:buildFixtures(),
+  openMatch:null,readonly:false,editRoster:false,theme:'dark'};
+function save(){try{localStorage.setItem(KEY,JSON.stringify({matches:state.matches,theme:state.theme,
+  roster:TEAMS.map(t=>({id:t.id,name:t.name,players:t.players.map(p=>({id:p.id,name:p.name}))}))}));}catch(e){}}
+function load(){try{
+  const raw=localStorage.getItem(KEY); if(!raw)return; const d=JSON.parse(raw);
+  if(d.roster)d.roster.forEach(rt=>{const t=teamById(rt.id); if(!t)return;
+    if(typeof rt.name==='string')t.name=rt.name;
+    rt.players.forEach(rp=>{const p=t.players.find(x=>x.id===rp.id); if(p&&typeof rp.name==='string')p.name=rp.name;});});
+  if(d.theme)state.theme=d.theme;
+  if(Array.isArray(d.matches)&&d.matches.length)state.matches=d.matches;
+}catch(e){}}
+load();
+
+const scoreOf=m=>{let a=0,b=0;(m.log||[]).forEach(s=>{s==='a'?a++:b++;});return{a:a,b:b,c:a+b};};
+const winnerOf=m=>{const s=scoreOf(m); if(s.a>=TARGET)return m.a; if(s.b>=TARGET)return m.b; return null;};
+const isOver=m=>winnerOf(m)!==null;
+const lineupReady=m=>!!(m.a&&m.b&&m.lineup&&m.lineup[m.a]&&m.lineup[m.b]
+  &&m.lineup[m.a].length===SQUAD&&m.lineup[m.b].length===SQUAD
+  &&m.lineup[m.a].every(Boolean)&&m.lineup[m.b].every(Boolean));
+const groupOf=tid=>{const t=teamById(tid);return t?t.grp:'1';};
+// Qualification is NOT group-wise: all 8 teams are ranked together on points scored,
+// then point difference. Wins are shown for information but are not a ranking criterion.
+function standings(){
+  const acc={}; TEAMS.forEach(t=>{acc[t.id]={team:t,p:0,w:0,l:0,pf:0,pa:0};});
+  state.matches.forEach(m=>{
+    if(m.stage!=='league'||!m.a||!m.b||!acc[m.a]||!acc[m.b])return;
+    const s=scoreOf(m),win=winnerOf(m);
+    acc[m.a].pf+=s.a;acc[m.a].pa+=s.b;acc[m.b].pf+=s.b;acc[m.b].pa+=s.a;
+    if(win){acc[m.a].p++;acc[m.b].p++;
+      if(win===m.a){acc[m.a].w++;acc[m.b].l++;}else{acc[m.b].w++;acc[m.a].l++;}}
+  });
+  return Object.keys(acc).map(k=>{const r=acc[k];r.diff=r.pf-r.pa;return r;})
+    .sort((x,y)=>y.pf-x.pf||y.diff-x.diff||y.w-x.w);
+}
+const leagueDone=()=>state.matches.filter(m=>m.stage==='league').every(isOver);
+function setPair(m,a,b){if(m.a===a&&m.b===b)return;m.a=a;m.b=b;m.lineup={};m.flip={};m.log=[];}
+function syncKnockout(){
+  const f=x=>state.matches.find(m=>m.slot===x);
+  const fin=f('F'),third=f('3RD'); if(!fin||!third)return;
+  if(!leagueDone())return;
+  const r=standings();
+  if(!isOver(fin))setPair(fin,r[0].team.id,r[1].team.id);
+  if(!isOver(third))setPair(third,r[2].team.id,r[3].team.id);
+}
+function champion(){const fi=state.matches.find(m=>m.slot==='F');
+  return fi&&winnerOf(fi)?teamById(winnerOf(fi)):null;}
+
+const ICONS={
+ cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ trophy:'<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 19.77 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 19.77 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>',
+ book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+ back:'<polyline points="15 18 9 12 15 6"/>',
+ undo:'<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+ share:'<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
+ check:'<polyline points="20 6 9 17 4 12"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+ swap:'<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>',
+ lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+ unlock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+ edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
+ moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+};
+const BALL='<svg width="17" height="17" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f7e94a" stroke="#c9b800" stroke-width="1.4"/>'+
+ '<circle cx="8.4" cy="8.4" r="1.5" fill="#c9b800"/><circle cx="15.4" cy="8" r="1.4" fill="#c9b800"/>'+
+ '<circle cx="12" cy="13.4" r="1.5" fill="#c9b800"/><circle cx="7.6" cy="15" r="1.3" fill="#c9b800"/>'+
+ '<circle cx="16" cy="15.6" r="1.3" fill="#c9b800"/></svg>';
+const svg=(n,s)=>'<svg width="'+(s||20)+'" height="'+(s||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+ICONS[n]+'</svg>';
+const esc=s=>String(s===undefined||s===null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const app=document.getElementById('app'),tabbar=document.getElementById('tabbar');
+const TABS=[{id:'fixtures',l:'Matches',i:'cal'},{id:'standings',l:'Table',i:'trophy'},
+            {id:'teams',l:'Teams',i:'users'},{id:'rules',l:'Rules',i:'book'}];
+
+function render(){
+  syncKnockout(); syncChrome();
+  document.documentElement.setAttribute('data-theme',state.theme);
+  tabbar.innerHTML=TABS.map(t=>'<button class="tabBtn '+(state.view===t.id?'active':'')+'" data-tab="'+t.id+'">'+svg(t.i)+'<span>'+t.l+'</span></button>').join('');
+  const v=state.view;
+  app.innerHTML = v==='fixtures'?(state.openMatch?viewMatch(state.openMatch):viewFixtures())
+    : v==='standings'?viewStandings() : v==='teams'?viewTeams() : viewRules();
+  window.scrollTo({top:0,behavior:'instant'});
+}
+
+const matchTitle=m=> m.stage==='sf'?(m.slot==='SF1'?'Semi-Final 1':'Semi-Final 2')
+  : m.stage==='third'?'3rd Place' : m.stage==='final'?'Final' : m.round;
+
+function viewFixtures(){
+  const ch=champion(); let h='';
+  if(ch)h+='<div class="winbanner"><div style="font-size:30px">🏆</div><div class="label" style="color:var(--accentInk)">Champions</div>'+
+    '<div class="wn anton" style="color:'+tcol(ch)+'">'+esc(ch.name)+'</div></div>';
+  h+='<h2 class="sec">Matches</h2><p class="lead">Rally scoring, first to '+TARGET+'. Change ends at '+SWITCH_AT+'. Substitution every '+GATE+' combined points. Tap a match to open the referee console.</p>';
+  if(!state.readonly)h+='<div class="toolbar">'+
+    '<button class="btn danger sm" data-act="resetall">Reset all scores</button></div>';
+  const seen=[];
+  state.matches.forEach(m=>{const t=matchTitle(m);if(seen.indexOf(t)<0)seen.push(t);});
+  seen.forEach(r=>{
+    h+='<div class="roundtag">'+esc(r)+'</div>';
+    state.matches.filter(m=>matchTitle(m)===r).forEach(m=>{h+=matchRow(m);});
+  });
+  return h;
+}
+function matchRow(m){
+  const a=m.a&&teamById(m.a),b=m.b&&teamById(m.b);
+  const s=scoreOf(m),win=winnerOf(m),started=(m.log||[]).length>0;
+  const st=win?'<span class="chip" style="background:color-mix(in srgb,var(--amber) 18%,transparent);color:var(--accentInk)">Final</span>'
+   :started?'<span class="chip" style="background:color-mix(in srgb,var(--mint) 16%,transparent);color:var(--mintInk)">Live · '+s.c+' combined</span>'
+   :(a&&b)?'<span class="chip" style="background:var(--raised);color:var(--dim)">Not started</span>'
+   :'<span class="chip" style="background:var(--raised);color:var(--dim)">Awaiting teams</span>';
+  return '<div class="mrow" data-match="'+m.id+'">'+
+    '<div style="display:flex;align-items:center;margin-bottom:8px">'+st+
+      (win?'<span class="dim" style="margin-left:auto;font-size:10.5px;font-weight:800">'+esc(teamById(win).name)+' won</span>':'')+'</div>'+
+    '<div style="display:flex;align-items:center;gap:9px">'+
+      '<div class="side">'+(a?'<span class="tdot" style="background:'+a.hex+'"></span><span class="nm">'+esc(a.name)+'</span>':'<span class="nm dim">TBD</span>')+'</div>'+
+      '<div class="sc" style="color:'+(win===m.a&&a?tcol(a):'var(--text)')+'">'+(a&&b?s.a:'–')+'</div>'+
+      '<div class="dim" style="font-size:10px;font-weight:800">v</div>'+
+      '<div class="sc" style="color:'+(win===m.b&&b?tcol(b):'var(--text)')+'">'+(a&&b?s.b:'–')+'</div>'+
+      '<div class="side b">'+(b?'<span class="tdot" style="background:'+b.hex+'"></span><span class="nm">'+esc(b.name)+'</span>':'<span class="nm dim">TBD</span>')+'</div>'+
+    '</div></div>';
+}
+
+function viewMatch(id){
+  const m=state.matches.find(x=>x.id===id); if(!m)return viewFixtures();
+  const a=teamById(m.a),b=teamById(m.b);
+  let h='<div class="refhead">'+
+    '<button class="btn ghost sm" data-act="closematch">'+svg('back',16)+'</button>'+
+    '<div style="flex:1"><div class="anton" style="font-size:19px">'+esc(matchTitle(m))+'</div>'+
+    '<div class="dim" style="font-size:10.5px;font-weight:700">Referee console · first to '+TARGET+' · sub every '+GATE+' combined</div></div>'+
+    (isOver(m)?'<button class="btn ghost sm" data-act="sharematch" data-match="'+m.id+'">'+svg('share',14)+'</button>':'')+'</div>';
+  if(!a||!b)return h+'<div class="empty"><div class="ic">⏳</div>This match is waiting on earlier results.</div>';
+  return h + (lineupReady(m) ? refConsole(m) : lineupEditor(m));
+}
+
+function lineupEditor(m){
+  let h='<p class="lead">Enter each team\'s rotation order A1–A6. Captains swap sheets before the match; once scoring starts the order is fixed.</p>';
+  [m.a,m.b].forEach(tid=>{
+    const t=teamById(tid),cur=(m.lineup&&m.lineup[tid])||[null,null,null,null,null,null];
+    const named=t.players.filter(p=>p.name.trim());
+    h+='<div class="card" style="margin-bottom:12px">'+
+      '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'+
+      '<span class="tdot" style="background:'+t.hex+'"></span><span class="anton" style="font-size:16px">'+esc(t.name)+'</span></div>';
+    for(let i=0;i<SQUAD;i++){
+      const used=cur.filter((x,j)=>x&&j!==i);
+      h+='<div class="lu-row"><span class="lu-slot">A'+(i+1)+'</span>'+
+        '<select class="lu" data-lu="'+tid+'" data-slot="'+i+'" '+(state.readonly?'disabled':'')+'>'+
+        '<option value="">— pick player —</option>'+
+        named.map(p=>'<option value="'+p.id+'" '+(cur[i]===p.id?'selected':'')+' '+(used.indexOf(p.id)>=0?'disabled':'')+'>'+esc(p.name)+' · '+p.pool+'</option>').join('')+
+        '</select></div>';
+    }
+    const done=cur.filter(Boolean).length;
+    h+= done===SQUAD?'<div class="valbox ok">'+svg('check',12)+' '+cur.map((p,i)=>'A'+(i+1)+' '+esc(pName(p))).join(' · ')+'</div>'
+      :'<div class="valbox warn">'+done+'/6 slots filled.</div>';
+    if(!state.readonly)h+='<div class="toolbar" style="margin:11px 0 0">'+
+      '<button class="btn ghost sm" data-act="autolu" data-team="'+tid+'" data-match="'+m.id+'">'+svg('zap',13)+' Fill in pool order</button>'+
+      '<button class="btn ghost sm" data-act="clearlu" data-team="'+tid+'" data-match="'+m.id+'">Clear</button></div>';
+    h+='</div>';
+  });
+  return h;
+}
+
+function boxHTML(m,tid,pos,cs,c,locked){
+  const lu=m.lineup[tid], idx=cs.slot[tid][pos], pid=lu[idx];
+  const key=(tid===m.a)?'a':'b';
+  const isServer=(cs.serving===key)&&(servingBox(cs,key)===pos)&&!isOver(m);
+  const justOn=cs.lastSub&&cs.lastSub.at===c&&cs.lastSub.enter===idx&&!isOver(m);
+  return '<div class="box '+((state.readonly||isOver(m)||locked)?'locked':'')+' '+(justOn?'justin':'')+'" data-pt="'+tid+'" data-match="'+m.id+'">'+
+    '<div class="posTag">'+(pos==='R'?'Right / Even':'Left / Odd')+'</div>'+
+    '<div class="pSlot">'+(isServer?'<span class="ball" title="Serving">'+BALL+'</span>':'')+
+      '<span class="sl">A'+(idx+1)+'</span><span class="pn">'+esc(pName(pid))+'</span>'+
+      '<span class="pPool">'+pPool(pid)+'</span></div>'+
+    (isServer?'<div class="servetag">serving from the '+(pos==='R'?'right':'left')+'</div>':'')+'</div>';
+}
+
+function refConsole(m){
+  const a=teamById(m.a),b=teamById(m.b);
+  const s=scoreOf(m),c=s.c,over=isOver(m),win=winnerOf(m);
+  const due=subDueNow(c)&&!over, toGate=nextGateAt(c)-c;
+  const cs=courtState(m);
+  const pend=subPending(m);
+  // Ends swap once either team reaches SWITCH_AT. Everything on this screen —
+  // score panels, court halves and the +/- rows — follows the same left/right order,
+  // so the referee always taps the side the team is physically standing on.
+  const ends=Math.max(s.a,s.b)>=SWITCH_AT;
+  const baseLeftIsA=((m.startLeft||m.a)===m.a);          // which team the referee allocated to the left
+  let leftT=ends?(baseLeftIsA?b:a):(baseLeftIsA?a:b);
+  let rightT=(leftT===a)?b:a;
+  if(m.invert){const sw=leftT;leftT=rightT;rightT=sw;}    // referee standing on the other side
+  const scoreOfT=t=>(t.id===m.a)?s.a:s.b;
+  const epend=endsPending(m);
+  const golden=(s.a===GOLDEN_AT&&s.b===GOLDEN_AT)&&!over;
+  let h='';
+  if(over){const wt=teamById(win);
+    h+='<div class="winbanner"><div style="font-size:28px">🏆</div><div class="label" style="color:var(--accentInk)">Match won</div>'+
+      '<div class="wn anton" style="color:'+tcol(wt)+'">'+esc(wt.name)+'</div>'+
+      '<div class="muted" style="font-size:13px;margin-top:4px;font-weight:700">'+s.a+' – '+s.b+'</div></div>';}
+
+  h+='<div class="scorestrip">'+
+    '<div class="sTeam"><div class="stripe" style="background:'+leftT.hex+'"></div>'+
+      '<div class="nm">'+esc(leftT.name)+'</div><div class="num" style="color:'+tcol(leftT)+'">'+scoreOfT(leftT)+'</div></div>'+
+    '<div class="combinedBox"><div class="cv">'+c+'</div><div class="cl">combined</div></div>'+
+    '<div class="sTeam right"><div class="stripe" style="background:'+rightT.hex+'"></div>'+
+      '<div class="nm">'+esc(rightT.name)+'</div><div class="num" style="color:'+tcol(rightT)+'">'+scoreOfT(rightT)+'</div></div></div>';
+
+  const hint=t=>(over||state.readonly||pend||epend)?('<div class="taphint">'+esc(t.name)+'</div>')
+    :('<div class="taphint">tap = +1 '+esc(t.name)+'</div>');
+  if((m.log||[]).length===0&&!state.readonly&&!over){
+    h+='<div class="tossbar"><span class="label">Serves first</span>'+
+      [[m.a,a],[m.b,b]].map(function(x){const on=((m.server||'a')===(x[0]===m.a?'a':'b'));
+        return '<button class="btn sm '+(on?'primary':'ghost')+'" data-act="serve" data-match="'+m.id+'" data-team="'+x[0]+'">'+
+          (on?BALL+' ':'')+esc(x[1].name)+'</button>';}).join('')+
+      '<span class="dim" style="font-size:10.5px;font-weight:700">first server starts on the right</span></div>';
+    h+='<div class="tossbar"><span class="label">Court sides</span>'+
+      '<span style="font-size:12px;font-weight:800">'+
+        '<span class="tdot" style="background:'+leftT.hex+';display:inline-block;vertical-align:-1px"></span> '+esc(leftT.name)+
+        ' <span class="dim">left</span> &nbsp;·&nbsp; '+
+        '<span class="tdot" style="background:'+rightT.hex+';display:inline-block;vertical-align:-1px"></span> '+esc(rightT.name)+
+        ' <span class="dim">right</span></span>'+
+      '<button class="btn sm ghost" data-act="startside" data-match="'+m.id+'">'+svg('swap',12)+' Swap</button>'+
+      '<span class="dim" style="font-size:10.5px;font-weight:700">set this to match where the teams actually stand</span></div>';
+  }
+  if(golden) h+='<div class="alertbar gold">'+svg('zap',16)+'<div>Golden point — the next rally wins the match.</div></div>';
+  h+='<div class="court">'+
+    '<div class="half a">'+boxHTML(m,leftT.id,'L',cs,c,!!(pend||epend))+boxHTML(m,leftT.id,'R',cs,c,!!(pend||epend))+'<div class="kitchen"></div>'+hint(leftT)+'</div>'+
+    '<div class="net"></div>'+
+    '<div class="half b">'+boxHTML(m,rightT.id,'R',cs,c,!!(pend||epend))+boxHTML(m,rightT.id,'L',cs,c,!!(pend||epend))+'<div class="kitchen"></div>'+hint(rightT)+'</div>'+
+  '</div>';
+  h+='<div class="endsnote">'+
+      (ends?('<span>'+svg('swap',12)+' Ends changed at '+SWITCH_AT+' — '+esc(leftT.name)+' now on the left</span>'):'<span></span>')+
+      (state.readonly?'':'<button class="btn sm ghost" data-act="invert" data-match="'+m.id+'"'+
+        (m.invert?' style="border-color:var(--mint);color:var(--mintInk)"':'')+'>'+svg('swap',12)+
+        ' '+(m.invert?'View flipped':'Flip my view')+'</button>')+'</div>';
+
+  if(!state.readonly){
+    h+='<div class="ctrls">';
+    [[leftT.id,leftT],[rightT.id,rightT]].forEach(pairT=>{
+      const tid=pairT[0],t=pairT[1];
+      const mine=(tid===m.a)?s.a:s.b;
+      h+='<div class="ctrlrow">'+
+        '<button class="rbtn" data-act="minus" data-match="'+m.id+'" data-team="'+tid+'" '+(mine===0?'disabled':'')+'>−</button>'+
+        '<div class="tl">'+esc(t.name)+'</div>'+
+        '<button class="btn ghost sm" data-act="flip" data-match="'+m.id+'" data-team="'+tid+'" title="Swap this team\'s starting right/left players">'+svg('swap',12)+' Swap start</button>'+
+        '<button class="rbtn plus" data-act="plus" data-match="'+m.id+'" data-team="'+tid+'" '+((over||pend||epend)?'disabled':'')+' style="background:'+t.hex+';color:#221a34">+</button>'+
+      '</div>';
+    });
+    h+='</div>';
+    if((m.log||[]).length)h+='<div class="toolbar"><button class="btn ghost sm" data-act="undo" data-match="'+m.id+'">'+svg('undo',13)+' Undo last point</button>'+
+      '<button class="btn danger sm" data-act="resetmatch" data-match="'+m.id+'">Reset score</button></div>';
+  }
+
+  h+='<div class="rotwrap">'+
+    '<div class="rothead"><span class="label">On court</span><span class="big">'+pairLabel(c)+'</span>'+
+    '<span class="dim" style="font-size:11px;font-weight:700;margin-left:auto">rotation follows the combined score</span></div>'+
+    '<div class="ladder">';
+  const segNow=curSeg(c)%SQUAD, cycles=Math.floor(curSeg(c)/SQUAD);
+  for(let g=0;g<SQUAD;g++){
+    const loAbs=(g+cycles*SQUAD)*GATE, hiAbs=loAbs+GATE;
+    const isCur=(g===segNow), doneG=c>=hiAbs;
+    const pct=isCur?Math.max(0,Math.min(100,((c-loAbs)/GATE)*100)):(doneG?100:0);
+    h+='<div class="gate '+(isCur?'cur':'')+' '+(doneG?'done':'')+'">'+
+      '<div class="bar"><div class="fill" style="width:'+pct+'%"></div><div class="pair">A'+(g+1)+'+A'+((g+1)%SQUAD+1)+'</div></div>'+
+      '<div class="tick">'+hiAbs+'</div></div>';
+  }
+  h+='</div>';
+  if(over)h+='<div class="countdown">Match complete.</div>';
+  else if(due){
+    const pi=pairIdx(c), outIdx=(pi[0]+SQUAD-1)%SQUAD;
+    const line=tid=>{const lu=m.lineup[tid];
+      const side=(cs.slot[tid].R===pi[1])?'right':'left';
+      return esc(teamById(tid).name)+': <b>'+esc(pName(lu[pi[1]]))+'</b> (A'+(pi[1]+1)+') comes on for '+
+        esc(pName(lu[outIdx]))+' (A'+(outIdx+1)+') on the <b>'+side+'</b>';};
+    h+='<div class="subalert">'+svg('swap',17)+'<div>Substitution at '+c+' — court is now '+pairLabel(c)+'<br>'+line(m.a)+'<br>'+line(m.b)+'</div></div>';
+  } else h+='<div class="countdown"><b>'+toGate+'</b> '+(toGate===1?'point':'points')+' to the next substitution (at '+nextGateAt(c)+' combined)</div>';
+  h+='</div>';
+
+  h+='<div class="ctrls">';
+  [[leftT.id,leftT],[rightT.id,rightT]].forEach(pairT=>{
+    const tid=pairT[0],t=pairT[1],lu=m.lineup[tid],pi=pairIdx(c);
+    const bench=[];
+    lu.forEach((p,i)=>{if(i!==pi[0]&&i!==pi[1])bench.push('<span class="chip" style="background:var(--raised);color:var(--muted)">A'+(i+1)+' '+esc(pName(p))+'</span>');});
+    h+='<div class="card" style="padding:11px 13px"><div class="label" style="margin-bottom:6px">'+esc(t.name)+' · bench</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px">'+bench.join('')+'</div></div>';
+  });
+  h+='</div>';
+
+  // Blocking change-of-ends confirmation
+  if(epend){
+    h+='<div class="submodal"><div class="subcard ends">'+
+      '<div class="subgate ends">Change ends · '+SWITCH_AT+' reached</div>'+
+      '<div class="subpair">Teams swap sides of the net</div>'+
+      '<div class="subrow"><div class="subswap" style="justify-content:center;font-size:14px">'+
+        '<span class="on"><span class="tdot" style="background:'+leftT.hex+'"></span> '+esc(leftT.name)+' <b>&rarr; left</b></span>'+
+      '</div></div>'+
+      '<div class="subrow"><div class="subswap" style="justify-content:center;font-size:14px">'+
+        '<span class="on"><span class="tdot" style="background:'+rightT.hex+'"></span> '+esc(rightT.name)+' <b>&rarr; right</b></span>'+
+      '</div></div>'+
+      (state.readonly?'':'<button class="btn mintbtn amberbtn" data-act="ackends" data-match="'+m.id+'">'+
+        svg('check',16)+' Ends changed — resume play</button>')+
+      '<div class="subnote">The console below has already been flipped to match. Scoring is paused until this is confirmed.</div>'+
+    '</div></div>';
+  }
+  // Blocking substitution confirmation — scoring stays locked until the referee confirms
+  else if(pend){
+    const sub=cs.lastSub||{}, pi=pairIdx(c);
+    const rowFor=function(tid){
+      const t=teamById(tid), lu=m.lineup[tid];
+      const side=(cs.slot[tid].R===sub.enter)?'right':'left';
+      return '<div class="subrow"><div class="subteam"><span class="tdot" style="background:'+t.hex+'"></span>'+esc(t.name)+'</div>'+
+        '<div class="subswap">'+
+          '<span class="off"><span class="tag">OFF</span> A'+(sub.leave+1)+' '+esc(pName(lu[sub.leave]))+'</span>'+
+          '<span class="arrow">'+svg('swap',15)+'</span>'+
+          '<span class="on"><span class="tag">ON</span> A'+(sub.enter+1)+' '+esc(pName(lu[sub.enter]))+
+            ' <b>('+side+')</b></span>'+
+        '</div></div>';
+    };
+    h+='<div class="submodal"><div class="subcard">'+
+      '<div class="subgate">Substitution · combined '+c+'</div>'+
+      '<div class="subpair">Court is now '+pairLabel(c)+'</div>'+
+      rowFor(m.a)+rowFor(m.b)+
+      (state.readonly?'':'<button class="btn mintbtn" data-act="acksub" data-match="'+m.id+'" data-gate="'+c+'">'+
+        svg('check',16)+' Substitution done — resume play</button>')+
+      '<div class="subnote">Scoring is paused until this is confirmed.</div>'+
+    '</div></div>';
+  }
+  return h;
+}
+
+function viewStandings(){
+  const rows=standings(), done=state.matches.filter(m=>m.stage==='league').filter(isOver).length;
+  let h='<h2 class="sec">Ranking</h2><p class="lead">All 8 teams ranked together — not group-wise. Ordered by <b>points scored</b>, then point difference. '+done+' of 16 league matches played.</p>';
+  if(!state.readonly)h+='<div class="toolbar"><button class="btn primary sm" data-act="sharetable">'+svg('share',13)+' Share to WhatsApp</button></div>';
+  h+='<div class="card" style="padding:4px 8px;margin-bottom:12px"><div class="table-scroll"><table class="stand">'+
+    '<thead><tr><th>#</th><th class="l">Team</th><th>Grp</th><th>P</th><th>W-L</th><th>Points</th><th>PA</th><th>+/-</th></tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    const fin=i<2, third=(i===2||i===3);
+    const bg=fin?'color-mix(in srgb,var(--amber) 22%,transparent)':third?'color-mix(in srgb,var(--mint) 16%,transparent)':'var(--raised)';
+    const fg=fin?'var(--accentInk)':third?'var(--mintInk)':'var(--dim)';
+    const dc=r.diff>0?'var(--mintInk)':r.diff<0?'var(--roseInk)':'var(--dim)';
+    h+='<tr><td><span class="rank" style="background:'+bg+';color:'+fg+'">'+(i+1)+'</span></td>'+
+      '<td class="l"><span class="tname"><span class="tdot" style="background:'+r.team.hex+'"></span>'+
+      '<span>'+esc(r.team.name)+'<span class="dim" style="font-size:9.5px;display:block;line-height:1.15;font-weight:700">'+esc(r.team.captain)+'</span></span></span></td>'+
+      '<td class="dim" style="font-weight:800">'+r.team.grp+'</td>'+
+      '<td class="muted">'+r.p+'</td>'+
+      '<td><span style="color:var(--mintInk);font-weight:800">'+r.w+'</span><span class="dim">-'+r.l+'</span></td>'+
+      '<td><span class="pts" style="color:var(--accentInk)">'+r.pf+'</span></td>'+
+      '<td class="muted">'+r.pa+'</td>'+
+      '<td style="font-weight:800;color:'+dc+'">'+(r.diff>0?'+':'')+r.diff+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  h+='<div class="card"><div class="rule-block" style="margin:0"><h3>How teams qualify</h3><ul>'+
+    '<li><b>1st and 2nd</b> overall play the <b>Final</b>.</li>'+
+    '<li><b>3rd and 4th</b> overall play for <b>3rd place</b>.</li>'+
+    '<li>Ranking is on <b>points scored</b> across all 4 matches; if level, <b>point difference</b> decides.</li></ul></div></div>';
+  return h;
+}
+
+function viewTeams(){
+  const editing=state.editRoster&&!state.readonly;
+  let h='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+    '<h2 class="sec" style="margin-bottom:0">Teams</h2>'+
+    (state.readonly?'':'<button class="btn sm '+(editing?'primary':'ghost')+'" data-act="editroster">'+(editing?svg('check',14)+' Done':svg('edit',14)+' Edit names')+'</button>')+'</div>'+
+  '<p class="lead">8 teams of 6: 1 captain, 2 from Pool 1, 2 from Pool 2, 1 from the G Pool.</p>'+
+  '<div class="team-grid">';
+  TEAMS.forEach(t=>{
+    h+='<div class="rcard"><div class="rhead"><span class="tdot" style="background:'+t.hex+';width:14px;height:14px"></span>'+
+      '<div style="flex:1;min-width:0">'+
+      (editing?'<input class="rname" data-tname="'+t.id+'" value="'+esc(t.name)+'">':'<div class="tn">'+esc(t.name)+'</div>')+
+      '<div class="dim" style="font-size:10px;font-weight:700;margin-top:2px">Group '+t.grp+' · '+esc(t.captain)+' · '+filled(t)+'/6 named</div></div></div>';
+    t.players.forEach(p=>{
+      h+='<div class="rrow"><span class="pool '+p.pool+'">'+p.pool+'</span>'+
+        (editing?'<input class="rname" data-pid="'+p.id+'" value="'+esc(p.name)+'">':'<span class="nm">'+esc(p.name)+'</span>')+'</div>';
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  if(editing)h+='<div class="toolbar" style="margin-top:14px"><button class="btn danger sm" data-act="resetroster">Restore original names</button></div>';
+  return h;
+}
+
+function viewRules(){
+  let seq='';
+  for(let g=0;g<SQUAD;g++)seq+='<div class="seqitem"><b>'+(g*GATE)+'–'+((g+1)*GATE)+'</b> · A'+(g+1)+'+A'+((g+1)%SQUAD+1)+'</div>';
+  return '<h2 class="sec">Rules</h2><p class="lead">Prime Time × Munchilicious team event · Chitrakoot · Sunday 9 August 2026, 8 am</p>'+
+  '<div class="card">'+
+    '<div class="rule-block"><h3>Teams</h3><ul>'+
+      '<li>8 teams of <b>6 players</b>: 1 captain, <b>2 from Pool 1</b>, <b>2 from Pool 2</b>, <b>1 from the G Pool</b>.</li>'+
+      '<li>Two groups of four. Each team plays its <b>3 group matches</b> plus <b>1 cross-group match</b> — 4 in total.</li></ul></div>'+
+    '<div class="rule-block"><h3>Scoring</h3><ul>'+
+      '<li><b>Rally points</b> — every rally scores, whoever wins it.</li>'+
+      '<li><b>First team to '+TARGET+' wins.</b></li>'+
+      '<li><b>Change ends</b> when a team reaches <b>'+SWITCH_AT+'</b>.</li>'+
+      '<li>At <b>'+GOLDEN_AT+'–'+GOLDEN_AT+'</b>, a <b>Golden Point</b> decides the match.</li></ul></div>'+
+    '<div class="rule-block"><h3>Qualification</h3><ul>'+
+      '<li>Qualification is <b>not group-wise</b> — all 8 teams are ranked together.</li>'+
+      '<li>Ranking is on <b>total points scored</b>. If teams are level, <b>point difference</b> decides.</li>'+
+      '<li><b>Top 2</b> overall play the <b>Final</b>. <b>3rd and 4th</b> play for <b>3rd place</b>.</li></ul></div>'+
+    '<div class="rule-block"><h3>Line-up</h3><ul>'+
+      '<li>Declare the order <b>A1 to A6</b> before the match and hand it to the opposing captain.</li>'+
+      '<li>Once declared, <b>the order cannot change</b> during the match.</li></ul></div>'+
+    '<div class="rule-block"><h3>Rotation</h3><ul>'+
+      '<li>A player is substituted each time the <b>combined score</b> reaches a multiple of '+GATE+': 15, 30, 45, 60, 75, 90.</li>'+
+      '<li>The pair moves one slot down the order each time; A6 pairs back with A1, then it repeats from 91.</li></ul>'+
+      '<div class="seq">'+seq+'</div></div>'+
+    '<div class="rule-block"><h3>Serving and sides</h3><ul>'+
+      '<li>The toss winner serves first, from the <b>right</b>.</li>'+
+      '<li>The server serves from the <b>right when their team\'s score is even</b>, and from the <b>left when it is odd</b>.</li>'+
+      '<li>If the <b>serving</b> team wins the rally, its two players <b>swap sides</b> and the same player serves again.</li>'+
+      '<li>If the <b>receiving</b> team wins the rally, the serve passes to them and <b>nobody swaps</b> — whoever is standing in the correct box serves.</li>'+
+      '<li>The console shows a 🟡 ball beside whoever is serving, and a substitute always takes the slot of the player they replace.</li>'+
+      '<li><b>Swap start</b> flips a team\'s opening right/left players if they line up the other way.</li>'+'<li>Before the first rally, set <b>Court sides</b> to match where the teams actually stand. At '+SWITCH_AT+' the console flips automatically and asks you to confirm.</li>'+'<li><b>Flip my view</b> mirrors the whole screen if you move to the other side of the court — it changes nothing in the score.</li></ul></div>'+
+  '</div>';
+}
+
+function tableText(){
+  let t='*Prime Time × Munchilicious*\nOverall Ranking — Chitrakoot\n';
+  const ch=champion(); if(ch)t+='\n🏆 Champions: '+ch.name+'\n';
+  t+='\n_Ranked by points scored_\n';
+  standings().forEach((r,i)=>{t+=(i+1)+'. '+r.team.name+' — '+r.pf+' pts ('+(r.diff>0?'+':'')+r.diff+')\n';});
+  return t.trim();
+}
+
+function matchText(m){
+  const a=teamById(m.a),b=teamById(m.b),s=scoreOf(m),win=winnerOf(m);
+  let t='*'+matchTitle(m)+'*\n'+a.name+'  '+s.a+' – '+s.b+'  '+b.name;
+  if(win)t+='\n\n🏆 '+teamById(win).name+' win';
+  return t;
+}
+const shareText=t=>{ if(navigator.share){navigator.share({text:t}).catch(()=>{});return;}
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); };
+
+const themeBtn=document.getElementById('themeBtn'),lockBtn=document.getElementById('lockBtn');
+function syncChrome(){
+  themeBtn.innerHTML=(state.theme==='light'?svg('moon',15):svg('sun',15))+'<span>'+(state.theme==='light'?'Dark':'Light')+'</span>';
+  themeBtn.title=state.theme==='light'?'Switch to dark background':'Switch to white background';
+  lockBtn.classList.toggle('on',state.readonly);
+  lockBtn.innerHTML=(state.readonly?svg('lock',15):svg('unlock',15))+'<span>'+(state.readonly?'View only':'Scoring')+'</span>';
+}
+themeBtn.addEventListener('click',()=>{state.theme=(state.theme==='light'?'dark':'light');save();render();});
+state.readonly=/(^|[#&?])view\b/i.test(location.hash);
+lockBtn.addEventListener('click',()=>{state.readonly=!state.readonly;
+  try{history.replaceState(null,'',state.readonly?'#view':location.pathname+location.search);}catch(e){}
+  render();});
+
+tabbar.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;
+  state.view=b.dataset.tab; if(state.view!=='fixtures')state.openMatch=null; render();});
+
+function addPoint(m,side){
+  if(isOver(m))return;
+  if(subPending(m)||endsPending(m))return;   // confirm the substitution / change of ends first
+  m.log.push(side); pruneAcks(m); save(); render();
+}
+
+app.addEventListener('click',e=>{
+  const M=id=>state.matches.find(x=>x.id===id);
+  const btn=e.target.closest('[data-act]');
+  if(btn){
+    const act=btn.dataset.act;
+    if(act==='closematch'){state.openMatch=null;render();return;}
+    if(act==='plus'){const m=M(btn.dataset.match);addPoint(m,btn.dataset.team===m.a?'a':'b');return;}
+    if(act==='minus'){const m=M(btn.dataset.match),want=(btn.dataset.team===m.a?'a':'b');
+      for(let i=m.log.length-1;i>=0;i--){if(m.log[i]===want){m.log.splice(i,1);break;}}
+      pruneAcks(m);save();render();return;}
+    if(act==='undo'){const m=M(btn.dataset.match);m.log.pop();pruneAcks(m);save();render();return;}
+    if(act==='ackends'){const m=M(btn.dataset.match);m.endsAcked=true;save();render();return;}
+    if(act==='startside'){const m=M(btn.dataset.match);
+      m.startLeft=((m.startLeft||m.a)===m.a)?m.b:m.a;save();render();return;}
+    if(act==='invert'){const m=M(btn.dataset.match);m.invert=!m.invert;save();render();return;}
+    if(act==='acksub'){const m=M(btn.dataset.match);
+      m.acked=(m.acked||[]).concat([Number(btn.dataset.gate)]);save();render();return;}
+    if(act==='serve'){const m=M(btn.dataset.match);
+      m.server=(btn.dataset.team===m.a)?'a':'b';save();render();return;}
+    if(act==='flip'){const m=M(btn.dataset.match);m.flip=m.flip||{};
+      m.flip[btn.dataset.team]=!m.flip[btn.dataset.team];save();render();return;}
+    if(act==='autolu'){const m=M(btn.dataset.match),t=teamById(btn.dataset.team);
+      m.lineup=m.lineup||{};m.lineup[t.id]=t.players.map(p=>p.id);save();render();return;}
+    if(act==='clearlu'){const m=M(btn.dataset.match);m.lineup=m.lineup||{};
+      m.lineup[btn.dataset.team]=[null,null,null,null,null,null];save();render();return;}
+    if(act==='resetmatch'){const m=M(btn.dataset.match);
+      if(confirm('Clear the score for this match? Line-ups are kept.')){m.log=[];save();render();}return;}
+    if(act==='resetall'){if(confirm('Reset every score and line-up? Player names are kept.')){
+      state.matches=buildFixtures();state.openMatch=null;save();render();}return;}
+    if(act==='editroster'){state.editRoster=!state.editRoster;render();return;}
+    if(act==='resetroster'){if(confirm('Restore the original team and player names?')){
+      const f=freshTeams();TEAMS.forEach((t,i)=>{t.name=f[i].name;t.players.forEach((p,j)=>{p.name=f[i].players[j].name;});});
+      save();render();}return;}
+    if(act==='sharetable'){shareText(tableText());return;}
+    if(act==='sharematch'){shareText(matchText(M(btn.dataset.match)));return;}
+  }
+  const box=e.target.closest('[data-pt]');
+  if(box&&!state.readonly){const m=M(box.dataset.match);
+    if(m&&!isOver(m)){addPoint(m,box.dataset.pt===m.a?'a':'b');return;}}
+  const row=e.target.closest('.mrow[data-match]');
+  if(row){state.openMatch=row.dataset.match;render();}
+});
+
+app.addEventListener('change',e=>{
+  const s=e.target.closest('select.lu');if(!s)return;
+  const m=state.matches.find(x=>x.id===state.openMatch);if(!m)return;
+  m.lineup=m.lineup||{};
+  if(!m.lineup[s.dataset.lu])m.lineup[s.dataset.lu]=[null,null,null,null,null,null];
+  m.lineup[s.dataset.lu][Number(s.dataset.slot)]=s.value||null;
+  save();render();
+});
+app.addEventListener('input',e=>{
+  const pn=e.target.closest('input[data-pid]');
+  if(pn){const p=playerById(pn.dataset.pid);if(p){p.name=pn.value;save();}return;}
+  const tn=e.target.closest('input[data-tname]');
+  if(tn){const t=teamById(tn.dataset.tname);if(t){t.name=tn.value;save();}}
+});
+
+render();
+</script>
+</body>
+</html>
