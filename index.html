@@ -165,6 +165,22 @@ h2.sec{font-family:'Anton',sans-serif;font-size:27px;margin:20px 0 3px;text-tran
 .btn.mintbtn{width:100%;margin-top:6px;background:linear-gradient(135deg,var(--mint),var(--mintD));color:#08251d;
   border:none;padding:14px;font-size:14px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;
   font-family:inherit;font-weight:800;cursor:pointer}
+.mvp{background:linear-gradient(135deg,color-mix(in srgb,var(--amber) 16%,transparent),color-mix(in srgb,var(--mint) 8%,transparent));
+  border:1px solid var(--amber);border-radius:18px;padding:20px;text-align:center;margin-bottom:14px}
+.mvpl{font-size:9px;text-transform:uppercase;letter-spacing:.16em;color:var(--accentInk);font-weight:800}
+.mvpn{font-size:32px;line-height:1.05;margin-top:4px}
+.mvpt{font-size:11.5px;font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;margin-top:3px}
+.mvpstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.mvpstats div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px}
+.mvpstats b{display:block;font-family:'Anton',sans-serif;font-size:19px;color:var(--text)}
+.mvpstats span{font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);font-weight:800}
+@media(max-width:560px){.mvpstats{grid-template-columns:repeat(2,1fr)}.mvpn{font-size:26px}}
+.finalrow{display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-top:14px}
+.finalside{flex:1;text-align:center}
+.finalside .fnm{font-size:11.5px;font-weight:800;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finalin{width:100%;max-width:110px;padding:12px 0;text-align:center;background:var(--ink2);border:2px solid var(--line);
+  border-radius:12px;color:var(--text);font-family:'Anton',sans-serif;font-size:30px;outline:none}
+.finalin:focus{border-color:var(--amber)}
 .subnote{font-size:10.5px;color:var(--dim);font-weight:700;margin-top:9px}
 .alertbar{border-radius:12px;padding:12px 14px;font-weight:800;font-size:12.5px;margin-bottom:10px;
   display:flex;align-items:center;gap:9px;animation:pulse 1.3s ease-in-out infinite}
@@ -346,6 +362,60 @@ function courtState(m){
   return {slot:slot,serving:serving,score:score,lastSub:lastSub};
 }
 const servingBox=(cs,key)=>(cs.score[key]%2===0)?'R':'L';
+// Replay a match rally by rally, reporting who was on court and who served for each point.
+function replayMatch(m,cb){
+  if(!lineupReady(m)||!(m.log||[]).length)return;
+  const fa=!!(m.flip&&m.flip[m.a]), fb=!!(m.flip&&m.flip[m.b]);
+  const slot={}; slot[m.a]={R:fa?1:0,L:fa?0:1}; slot[m.b]={R:fb?1:0,L:fb?0:1};
+  let serving=m.server||'a'; const score={a:0,b:0};
+  m.log.forEach(w=>{
+    const key=serving, servTid=(key==='a')?m.a:m.b;
+    const serverIdx=slot[servTid][(score[key]%2===0)?'R':'L'];
+    const onCourt={};
+    [m.a,m.b].forEach(t=>{onCourt[t]=[m.lineup[t][slot[t].R],m.lineup[t][slot[t].L]];});
+    cb({m:m,w:w,servingKey:key,serverPid:m.lineup[servTid][serverIdx],
+        onCourt:onCourt,lead:Math.max(score.a,score.b)});
+    const tid=(w==='a')?m.a:m.b, wasServing=(serving===w);
+    score[w]++;
+    if(wasServing){const s2=slot[tid],t2=s2.R;s2.R=s2.L;s2.L=t2;} else serving=w;
+    const c=score.a+score.b;
+    if(c%GATE===0){const seg=c/GATE,leave=((seg-1)%SQUAD+SQUAD)%SQUAD,enter=(seg+1)%SQUAD;
+      [m.a,m.b].forEach(t=>{const s3=slot[t];if(s3.R===leave)s3.R=enter;else if(s3.L===leave)s3.L=enter;});}
+  });
+}
+const CLUTCH_FROM=40;   // rallies played once either team is on 40+
+// Per-player and per-pair rally stats across every match that has line-ups.
+function rallyStats(){
+  const P={},PR={};
+  TEAMS.forEach(t=>t.players.forEach(p=>{P[p.id]={p:p,team:t,won:0,lost:0,serves:0,servePts:0,
+    cw:0,cl:0,matches:{}};}));
+  let withLineups=0,total=0;
+  state.matches.forEach(m=>{
+    if(!m.a||!m.b||!(m.log||[]).length)return;
+    total++; if(!lineupReady(m))return; withLineups++;
+    replayMatch(m,ev=>{
+      const winTid=(ev.w==='a')?m.a:m.b, loseTid=(ev.w==='a')?m.b:m.a;
+      const clutch=ev.lead>=CLUTCH_FROM;
+      ev.onCourt[winTid].forEach(pid=>{const r=P[pid];if(!r)return;r.won++;r.matches[m.id]=1;if(clutch)r.cw++;});
+      ev.onCourt[loseTid].forEach(pid=>{const r=P[pid];if(!r)return;r.lost++;r.matches[m.id]=1;if(clutch)r.cl++;});
+      const sv=P[ev.serverPid];
+      if(sv){sv.serves++; if((ev.servingKey==='a'?m.a:m.b)===winTid)sv.servePts++;}
+      [[winTid,true],[loseTid,false]].forEach(x=>{
+        const ids=ev.onCourt[x[0]].slice().sort(), k=ids.join('|');
+        if(!PR[k])PR[k]={ids:ids,team:teamById(x[0]),won:0,lost:0};
+        x[1]?PR[k].won++:PR[k].lost++;
+      });
+    });
+  });
+  const fin=o=>{o.rallies=o.won+o.lost;o.diff=o.won-o.lost;
+    o.rate=o.rallies?Math.round(o.won/o.rallies*1000)/10:0;return o;};
+  const players=Object.keys(P).map(k=>fin(P[k])).filter(o=>o.rallies>0)
+    .map(o=>{o.played=Object.keys(o.matches).length;
+      o.hold=o.serves?Math.round(o.servePts/o.serves*1000)/10:0;
+      o.cdiff=o.cw-o.cl;return o;});
+  const pairs=Object.keys(PR).map(k=>fin(PR[k]));
+  return {players:players,pairs:pairs,withLineups:withLineups,total:total};
+}
 // A substitution gate that has NOT yet been acknowledged by the referee.
 function subPending(m){
   if(!lineupReady(m)||isOver(m))return null;
@@ -386,7 +456,7 @@ function buildFixtures(){
 
 const KEY='pt_munch_team_event_v4';
 let state={view:'fixtures',matches:buildFixtures(),
-  openMatch:null,readonly:false,editRoster:false,theme:'dark'};
+  openMatch:null,readonly:false,editRoster:false,theme:'dark',statsView:'players'};
 function save(){try{localStorage.setItem(KEY,JSON.stringify({matches:state.matches,theme:state.theme,
   roster:TEAMS.map(t=>({id:t.id,name:t.name,players:t.players.map(p=>({id:p.id,name:p.name}))}))}));}catch(e){}}
 function load(){try{
@@ -446,6 +516,7 @@ const ICONS={
  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
  unlock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
  edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+ bars:'<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
 };
@@ -456,7 +527,7 @@ const BALL='<svg width="17" height="17" viewBox="0 0 24 24"><circle cx="12" cy="
 const svg=(n,s)=>'<svg width="'+(s||20)+'" height="'+(s||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+ICONS[n]+'</svg>';
 const esc=s=>String(s===undefined||s===null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const app=document.getElementById('app'),tabbar=document.getElementById('tabbar');
-const TABS=[{id:'fixtures',l:'Matches',i:'cal'},{id:'standings',l:'Table',i:'trophy'},
+const TABS=[{id:'fixtures',l:'Matches',i:'cal'},{id:'standings',l:'Table',i:'trophy'},{id:'stats',l:'Stats',i:'bars'},
             {id:'teams',l:'Teams',i:'users'},{id:'rules',l:'Rules',i:'book'}];
 
 function render(){
@@ -465,7 +536,7 @@ function render(){
   tabbar.innerHTML=TABS.map(t=>'<button class="tabBtn '+(state.view===t.id?'active':'')+'" data-tab="'+t.id+'">'+svg(t.i)+'<span>'+t.l+'</span></button>').join('');
   const v=state.view;
   app.innerHTML = v==='fixtures'?(state.openMatch?viewMatch(state.openMatch):viewFixtures())
-    : v==='standings'?viewStandings() : v==='teams'?viewTeams() : viewRules();
+    : v==='standings'?viewStandings() : v==='stats'?viewStats() : v==='teams'?viewTeams() : viewRules();
   window.scrollTo({top:0,behavior:'instant'});
 }
 
@@ -513,9 +584,12 @@ function viewMatch(id){
     '<button class="btn ghost sm" data-act="closematch">'+svg('back',16)+'</button>'+
     '<div style="flex:1"><div class="anton" style="font-size:19px">'+esc(matchTitle(m))+'</div>'+
     '<div class="dim" style="font-size:10.5px;font-weight:700">Referee console · first to '+TARGET+' · sub every '+GATE+' combined</div></div>'+
+    (state.readonly?'':'<button class="btn ghost sm" data-act="openfinal" data-match="'+m.id+'">'+svg('edit',14)+' Final score</button>')+
     (isOver(m)?'<button class="btn ghost sm" data-act="sharematch" data-match="'+m.id+'">'+svg('share',14)+'</button>':'')+'</div>';
   if(!a||!b)return h+'<div class="empty"><div class="ic">⏳</div>This match is waiting on earlier results.</div>';
-  return h + (lineupReady(m) ? refConsole(m) : lineupEditor(m));
+  h += (lineupReady(m) ? refConsole(m) : lineupEditor(m));
+  if(state.finalFor===m.id) h += finalModal(m);
+  return h;
 }
 
 function lineupEditor(m){
@@ -543,6 +617,29 @@ function lineupEditor(m){
     h+='</div>';
   });
   return h;
+}
+
+// Record a completed match without scoring it rally by rally.
+function finalModal(m){
+  const a=teamById(m.a), b=teamById(m.b), sc=scoreOf(m);
+  const va=(state.finalA!==undefined)?state.finalA:(sc.c?String(sc.a):'');
+  const vb=(state.finalB!==undefined)?state.finalB:(sc.c?String(sc.b):'');
+  return '<div class="submodal"><div class="subcard">'+
+    '<div class="subgate" style="color:var(--accentInk)">Final score</div>'+
+    '<div class="subpair">'+esc(matchTitle(m))+' — for matches you are not scoring live</div>'+
+    '<div class="finalrow">'+
+      '<div class="finalside"><div class="fnm">'+esc(a.name)+'</div>'+
+        '<input class="finalin" data-final="a" type="number" min="0" max="'+TARGET+'" inputmode="numeric" value="'+esc(va)+'"></div>'+
+      '<div class="dim" style="font-weight:800">–</div>'+
+      '<div class="finalside"><div class="fnm">'+esc(b.name)+'</div>'+
+        '<input class="finalin" data-final="b" type="number" min="0" max="'+TARGET+'" inputmode="numeric" value="'+esc(vb)+'"></div>'+
+    '</div>'+
+    (state.finalErr?'<div class="valbox warn" style="text-align:left">'+esc(state.finalErr)+'</div>':
+      '<div class="subnote" style="margin-top:10px">The winner must be on '+TARGET+'. The loser can be 0–'+(TARGET-1)+'.</div>')+
+    '<div style="display:flex;gap:8px;margin-top:12px">'+
+      '<button class="btn ghost" style="flex:1" data-act="closefinal">Cancel</button>'+
+      '<button class="btn primary" style="flex:1" data-act="savefinal" data-match="'+m.id+'">'+svg('check',15)+' Save result</button>'+
+    '</div></div></div>';
 }
 
 function boxHTML(m,tid,pos,cs,c,locked){
@@ -604,6 +701,15 @@ function refConsole(m){
         ' <span class="dim">right</span></span>'+
       '<button class="btn sm ghost" data-act="startside" data-match="'+m.id+'">'+svg('swap',12)+' Swap</button>'+
       '<span class="dim" style="font-size:10.5px;font-weight:700">set this to match where the teams actually stand</span></div>';
+    h+='<div class="tossbar"><span class="label">Starting positions</span>'+
+      [[m.a,a],[m.b,b]].map(function(x){
+        const cs0=courtState(Object.assign({},m,{log:[]}));
+        const rightIdx=cs0.slot[x[0]].R;
+        return '<span style="font-size:11.5px;font-weight:800"><span class="tdot" style="background:'+x[1].hex+
+          ';display:inline-block;vertical-align:-1px"></span> '+esc(x[1].name)+' <span class="dim">A'+(rightIdx+1)+' right</span>'+
+          ' <button class="btn sm ghost" data-act="flip" data-match="'+m.id+'" data-team="'+x[0]+'">'+svg('swap',11)+'</button></span>';
+      }).join('')+
+      '<span class="dim" style="font-size:10.5px;font-weight:700">locks once the first point is scored</span></div>';
   }
   if(golden) h+='<div class="alertbar gold">'+svg('zap',16)+'<div>Golden point — the next rally wins the match.</div></div>';
   h+='<div class="court">'+
@@ -625,7 +731,6 @@ function refConsole(m){
       h+='<div class="ctrlrow">'+
         '<button class="rbtn" data-act="minus" data-match="'+m.id+'" data-team="'+tid+'" '+(mine===0?'disabled':'')+'>−</button>'+
         '<div class="tl">'+esc(t.name)+'</div>'+
-        '<button class="btn ghost sm" data-act="flip" data-match="'+m.id+'" data-team="'+tid+'" title="Swap this team\'s starting right/left players">'+svg('swap',12)+' Swap start</button>'+
         '<button class="rbtn plus" data-act="plus" data-match="'+m.id+'" data-team="'+tid+'" '+((over||pend||epend)?'disabled':'')+' style="background:'+t.hex+';color:#221a34">+</button>'+
       '</div>';
     });
@@ -740,6 +845,73 @@ function viewStandings(){
   return h;
 }
 
+function viewStats(){
+  const R=rallyStats();
+  let h='<h2 class="sec">Stats</h2>';
+  if(!R.players.length){
+    return h+'<div class="empty"><div class="ic">📊</div>No rally data yet.<br>'+
+      'Stats are built from matches scored point by point with line-ups set.<br>'+
+      'Matches entered with <b>Final score</b> only count towards the table, not these stats.</div>';
+  }
+  const mvp=R.players.slice().sort((x,y)=>y.diff-x.diff||y.rate-x.rate)[0];
+  h+='<p class="lead">Every rally is credited to the two players actually on court. '+
+     R.withLineups+' of '+R.total+' scored matches have line-up data'+
+     (R.withLineups<R.total?' — final-score-only matches are excluded.':'.')+'</p>';
+  // MVP card
+  h+='<div class="mvp"><div class="mvpl">Most valuable player</div>'+
+    '<div class="mvpn anton" style="color:'+tcol(mvp.team)+'">'+esc(mvp.p.name)+'</div>'+
+    '<div class="mvpt"><span class="tdot" style="background:'+mvp.team.hex+'"></span> '+esc(mvp.team.name)+'</div>'+
+    '<div class="mvpstats">'+
+      '<div><b>'+(mvp.diff>0?'+':'')+mvp.diff+'</b><span>rally +/-</span></div>'+
+      '<div><b>'+mvp.won+'</b><span>points won</span></div>'+
+      '<div><b>'+mvp.rate+'%</b><span>win rate</span></div>'+
+      '<div><b>'+mvp.hold+'%</b><span>held serve</span></div>'+
+    '</div></div>';
+  const views=[['players','Players'],['pairs','Pairs'],['serve','Serving'],['clutch','Clutch']];
+  h+='<div class="toolbar">'+views.map(v=>'<button class="btn sm '+(state.statsView===v[0]?'primary':'ghost')+
+      '" data-act="statsview" data-view="'+v[0]+'">'+v[1]+'</button>').join('')+
+      (state.readonly?'':'<button class="btn sm ghost" data-act="sharestats">'+svg('share',13)+' Share</button>')+'</div>';
+  const nameCell=o=>'<td class="l"><span class="tname"><span class="tdot" style="background:'+o.team.hex+'"></span>'+
+    '<span>'+esc(o.p?o.p.name:(pName(o.ids[0])+' & '+pName(o.ids[1])))+
+    '<span class="dim" style="font-size:9.5px;display:block;line-height:1.15;font-weight:700">'+esc(o.team.name)+'</span></span></span></td>';
+  const dcell=d=>'<td style="font-weight:800;color:'+(d>0?'var(--mintInk)':d<0?'var(--roseInk)':'var(--dim)')+'">'+(d>0?'+':'')+d+'</td>';
+  const wrap=(head,rows)=>'<div class="card" style="padding:4px 8px"><div class="table-scroll"><table class="stand">'+
+    '<thead><tr>'+head+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  const rank=i=>'<td><span class="rank" style="background:'+(i<3?'color-mix(in srgb,var(--amber) 20%,transparent)':'var(--raised)')+
+    ';color:'+(i<3?'var(--accentInk)':'var(--dim)')+'">'+(i+1)+'</span></td>';
+
+  if(state.statsView==='players'){
+    const rows=R.players.slice().sort((x,y)=>y.diff-x.diff||y.rate-x.rate).map((o,i)=>
+      '<tr>'+rank(i)+nameCell(o)+'<td class="muted">'+o.played+'</td><td class="muted">'+o.rallies+'</td>'+
+      '<td><span class="pts" style="color:var(--mintInk)">'+o.won+'</span></td><td class="muted">'+o.lost+'</td>'+
+      dcell(o.diff)+'<td class="muted">'+o.rate+'%</td></tr>').join('');
+    h+=wrap('<th>#</th><th class="l">Player</th><th>M</th><th>Rallies</th><th>Won</th><th>Lost</th><th>+/-</th><th>Win%</th>',rows);
+    h+='<p class="dim" style="font-size:11px;margin-top:9px">M = matches. A rally counts for both players on court when it is won or lost.</p>';
+  } else if(state.statsView==='pairs'){
+    const rows=R.pairs.slice().sort((x,y)=>y.diff-x.diff||y.rate-x.rate).slice(0,20).map((o,i)=>
+      '<tr>'+rank(i)+nameCell(o)+'<td class="muted">'+o.rallies+'</td>'+
+      '<td><span class="pts" style="color:var(--mintInk)">'+o.won+'</span></td><td class="muted">'+o.lost+'</td>'+
+      dcell(o.diff)+'<td class="muted">'+o.rate+'%</td></tr>').join('');
+    h+=wrap('<th>#</th><th class="l">Partnership</th><th>Rallies</th><th>Won</th><th>Lost</th><th>+/-</th><th>Win%</th>',rows);
+    h+='<p class="dim" style="font-size:11px;margin-top:9px">Every duo the rotation puts on court together, best partnerships first.</p>';
+  } else if(state.statsView==='serve'){
+    const rows=R.players.filter(o=>o.serves>0).sort((x,y)=>y.hold-x.hold||y.serves-x.serves).map((o,i)=>
+      '<tr>'+rank(i)+nameCell(o)+'<td class="muted">'+o.serves+'</td>'+
+      '<td><span class="pts" style="color:var(--mintInk)">'+o.servePts+'</span></td>'+
+      '<td style="font-weight:800;color:var(--accentInk)">'+o.hold+'%</td></tr>').join('');
+    h+=wrap('<th>#</th><th class="l">Player</th><th>Serves</th><th>Won</th><th>Hold%</th>',rows);
+    h+='<p class="dim" style="font-size:11px;margin-top:9px">Rallies won on their own serve. Hold% is how often serving turned into a point.</p>';
+  } else {
+    const rows=R.players.filter(o=>o.cw+o.cl>0).sort((x,y)=>y.cdiff-x.cdiff||y.cw-x.cw).map((o,i)=>
+      '<tr>'+rank(i)+nameCell(o)+'<td class="muted">'+(o.cw+o.cl)+'</td>'+
+      '<td><span class="pts" style="color:var(--mintInk)">'+o.cw+'</span></td><td class="muted">'+o.cl+'</td>'+
+      dcell(o.cdiff)+'</tr>').join('');
+    h+=wrap('<th>#</th><th class="l">Player</th><th>Rallies</th><th>Won</th><th>Lost</th><th>+/-</th>',rows);
+    h+='<p class="dim" style="font-size:11px;margin-top:9px">Only rallies played once a team reached '+CLUTCH_FROM+' — the closing stretch of a match.</p>';
+  }
+  return h;
+}
+
 function viewTeams(){
   const editing=state.editRoster&&!state.readonly;
   let h='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
@@ -793,7 +965,7 @@ function viewRules(){
       '<li>If the <b>serving</b> team wins the rally, its two players <b>swap sides</b> and the same player serves again.</li>'+
       '<li>If the <b>receiving</b> team wins the rally, the serve passes to them and <b>nobody swaps</b> — whoever is standing in the correct box serves.</li>'+
       '<li>The console shows a 🟡 ball beside whoever is serving, and a substitute always takes the slot of the player they replace.</li>'+
-      '<li><b>Swap start</b> flips a team\'s opening right/left players if they line up the other way.</li>'+'<li>Before the first rally, set <b>Court sides</b> to match where the teams actually stand. At '+SWITCH_AT+' the console flips automatically and asks you to confirm.</li>'+'<li><b>Flip my view</b> mirrors the whole screen if you move to the other side of the court — it changes nothing in the score.</li></ul></div>'+
+      '<li><b>Starting positions</b> and <b>Court sides</b> are set before the first rally and lock once a point is scored.</li>'+'<li>Use <b>Final score</b> in the match header to record a result for a match you did not score rally by rally.</li>'+'<li>Before the first rally, set <b>Court sides</b> to match where the teams actually stand. At '+SWITCH_AT+' the console flips automatically and asks you to confirm.</li>'+'<li><b>Flip my view</b> mirrors the whole screen if you move to the other side of the court — it changes nothing in the score.</li></ul></div>'+
   '</div>';
 }
 
@@ -802,6 +974,22 @@ function tableText(){
   const ch=champion(); if(ch)t+='\n🏆 Champions: '+ch.name+'\n';
   t+='\n_Ranked by points scored_\n';
   standings().forEach((r,i)=>{t+=(i+1)+'. '+r.team.name+' — '+r.pf+' pts ('+(r.diff>0?'+':'')+r.diff+')\n';});
+  return t.trim();
+}
+
+function statsText(){
+  const R=rallyStats(); if(!R.players.length)return 'No rally stats yet.';
+  const by=(arr,f)=>arr.slice().sort(f);
+  const P=by(R.players,(x,y)=>y.diff-x.diff), S=by(R.players.filter(o=>o.serves>2),(x,y)=>y.hold-x.hold);
+  const PR=by(R.pairs,(x,y)=>y.diff-x.diff);
+  let t='*Prime Time × Munchilicious — Stats*\n';
+  t+='\n🏅 *MVP:* '+P[0].p.name+' ('+P[0].team.name+') — '+(P[0].diff>0?'+':'')+P[0].diff+' rally +/-\n';
+  t+='\n*Top players (rally +/-)*\n';
+  P.slice(0,5).forEach((o,i)=>{t+=(i+1)+'. '+o.p.name+' — '+(o.diff>0?'+':'')+o.diff+' ('+o.won+' won)\n';});
+  t+='\n*Best partnerships*\n';
+  PR.slice(0,3).forEach((o,i)=>{t+=(i+1)+'. '+pName(o.ids[0])+' & '+pName(o.ids[1])+' — '+(o.diff>0?'+':'')+o.diff+'\n';});
+  if(S.length){t+='\n*Best serve hold*\n';
+    S.slice(0,3).forEach((o,i)=>{t+=(i+1)+'. '+o.p.name+' — '+o.hold+'%\n';});}
   return t.trim();
 }
 
@@ -847,6 +1035,21 @@ app.addEventListener('click',e=>{
       for(let i=m.log.length-1;i>=0;i--){if(m.log[i]===want){m.log.splice(i,1);break;}}
       pruneAcks(m);save();render();return;}
     if(act==='undo'){const m=M(btn.dataset.match);m.log.pop();pruneAcks(m);save();render();return;}
+    if(act==='openfinal'){state.finalFor=btn.dataset.match;
+      state.finalA=undefined;state.finalB=undefined;state.finalErr='';render();return;}
+    if(act==='closefinal'){state.finalFor=null;state.finalErr='';render();return;}
+    if(act==='savefinal'){
+      const m=M(btn.dataset.match);
+      const A=parseInt(state.finalA,10), B=parseInt(state.finalB,10);
+      if(isNaN(A)||isNaN(B)){state.finalErr='Enter both scores.';render();return;}
+      if(A<0||B<0||A>TARGET||B>TARGET){state.finalErr='Scores must be between 0 and '+TARGET+'.';render();return;}
+      if(A!==TARGET&&B!==TARGET){state.finalErr='One team must be on '+TARGET+' — that is what ends the match.';render();return;}
+      if(A===TARGET&&B===TARGET){state.finalErr='Both teams cannot be on '+TARGET+'.';render();return;}
+      if((m.log||[]).length && !confirm('This replaces the score already recorded for this match. Continue?'))return;
+      const log=[]; let x=A,y=B;                    // interleave so the running total looks sane
+      while(x>0||y>0){ if(x>0){log.push('a');x--;} if(y>0){log.push('b');y--;} }
+      m.log=log; m.acked=[15,30,45,60,75,90,105,120]; m.endsAcked=true;
+      state.finalFor=null;state.finalErr='';save();render();return;}
     if(act==='ackends'){const m=M(btn.dataset.match);m.endsAcked=true;save();render();return;}
     if(act==='startside'){const m=M(btn.dataset.match);
       m.startLeft=((m.startLeft||m.a)===m.a)?m.b:m.a;save();render();return;}
@@ -855,7 +1058,9 @@ app.addEventListener('click',e=>{
       m.acked=(m.acked||[]).concat([Number(btn.dataset.gate)]);save();render();return;}
     if(act==='serve'){const m=M(btn.dataset.match);
       m.server=(btn.dataset.team===m.a)?'a':'b';save();render();return;}
-    if(act==='flip'){const m=M(btn.dataset.match);m.flip=m.flip||{};
+    if(act==='flip'){const m=M(btn.dataset.match);
+      if((m.log||[]).length)return;                 // starting positions lock once play begins
+      m.flip=m.flip||{};
       m.flip[btn.dataset.team]=!m.flip[btn.dataset.team];save();render();return;}
     if(act==='autolu'){const m=M(btn.dataset.match),t=teamById(btn.dataset.team);
       m.lineup=m.lineup||{};m.lineup[t.id]=t.players.map(p=>p.id);save();render();return;}
@@ -869,6 +1074,8 @@ app.addEventListener('click',e=>{
     if(act==='resetroster'){if(confirm('Restore the original team and player names?')){
       const f=freshTeams();TEAMS.forEach((t,i)=>{t.name=f[i].name;t.players.forEach((p,j)=>{p.name=f[i].players[j].name;});});
       save();render();}return;}
+    if(act==='statsview'){state.statsView=btn.dataset.view;render();return;}
+    if(act==='sharestats'){shareText(statsText());return;}
     if(act==='sharetable'){shareText(tableText());return;}
     if(act==='sharematch'){shareText(matchText(M(btn.dataset.match)));return;}
   }
@@ -888,6 +1095,8 @@ app.addEventListener('change',e=>{
   save();render();
 });
 app.addEventListener('input',e=>{
+  const fin=e.target.closest('input.finalin');
+  if(fin){ if(fin.dataset.final==='a')state.finalA=fin.value; else state.finalB=fin.value; return; }
   const pn=e.target.closest('input[data-pid]');
   if(pn){const p=playerById(pn.dataset.pid);if(p){p.name=pn.value;save();}return;}
   const tn=e.target.closest('input[data-tname]');
