@@ -160,6 +160,38 @@ label.fl{display:block;font-size:10px;letter-spacing:.12em;text-transform:upperc
 .ldg-cell.tbd .rk{color:var(--dim);opacity:.45}
 .ldg-tot{display:grid;place-items:center;border-left:1px solid var(--line);background:var(--ink2)}
 .ldg-tot b{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+.ldg-tot .pen{display:block;font-size:9px;font-weight:800;color:var(--redInk);margin-top:1px}
+
+/* ---------- printable team sheets (Save as PDF) ---------- */
+#printarea{display:none}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{background:#fff!important;color:#000!important}
+  body>header,body>nav,body>.wrap,body>.toast,body>.ov{display:none!important}
+  #printarea{display:block!important;font-size:10pt;line-height:1.35;color:#000}
+  #printarea .sheet{page-break-after:always;break-after:page}
+  #printarea .sheet:last-child{page-break-after:auto;break-after:auto}
+  #printarea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+#printarea .phd{display:flex;align-items:center;gap:10px;border-bottom:2px solid #111;padding-bottom:7px;margin-bottom:9px}
+#printarea .phd img{height:46px;width:auto}
+#printarea .phd h1{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:20pt;text-transform:uppercase;letter-spacing:.01em}
+#printarea .phd .sub{font-size:8pt;letter-spacing:.14em;text-transform:uppercase;color:#555}
+#printarea .phd .rt{margin-left:auto;text-align:right;font-size:8pt;color:#555}
+#printarea h2{font-family:'Barlow Condensed',sans-serif;font-size:12.5pt;text-transform:uppercase;
+  margin:11px 0 4px;border-bottom:1px solid #bbb;padding-bottom:2px;letter-spacing:.02em}
+#printarea table{width:100%;border-collapse:collapse;margin-bottom:4px}
+#printarea th,#printarea td{border:1px solid #999;padding:3.2px 5px;font-size:8.6pt;text-align:left;vertical-align:top}
+#printarea th{background:#eceff4;font-size:7.4pt;letter-spacing:.07em;text-transform:uppercase}
+#printarea td.c,#printarea th.c{text-align:center;width:26px}
+#printarea .yes{font-weight:700}
+#printarea .no{color:#bbb}
+#printarea .out td{color:#888;text-decoration:line-through}
+#printarea .note{font-size:8pt;color:#444;margin:3px 0 0}
+#printarea .warn{border:1px solid #b00;background:#fff0f0;padding:5px 7px;font-size:8.4pt;margin:5px 0}
+#printarea .okbox{border:1px solid #197a4e;background:#f1fbf5;padding:5px 7px;font-size:8.4pt;margin:5px 0}
+#printarea .sign{display:flex;gap:22px;margin-top:16px}
+#printarea .sign div{flex:1;border-top:1px solid #666;padding-top:4px;font-size:8pt;color:#444}
 
 /* ---------- collapsible fixture sections ---------- */
 .fxsec{border:1px solid var(--line);border-radius:var(--r);margin:9px 0;overflow:hidden;background:var(--surface)}
@@ -638,20 +670,21 @@ let state = {
   v:APP_VER, theme:'dark', tab:'live', scorer:false, pin:'2026',
   sportFilter:'all', teamFilter:'all', fxOpen:{}, standSport:'overall', openMatch:null, openTeam:null,
   statSport:'all', statsView:'players', finalFor:null, finalA:undefined, finalB:undefined, finalErr:'',
-  matches:[], nom:{}, avail:{}, myTeam:null
+  matches:[], nom:{}, avail:{}, pen:{}, myTeam:null, print:null
 };
 
 function blankNom(){ const n={}; TEAMS.forEach(t=>{ n[t.id]={PB:[],BM:[],TT:[],CR:[],CH:[]}; }); return n; }
 
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify({
   v:APP_VER, theme:state.theme, scorer:state.scorer, pin:state.pin, myTeam:state.myTeam,
-  matches:state.matches, nom:state.nom, avail:state.avail })); }catch(e){}
+  matches:state.matches, nom:state.nom, avail:state.avail, pen:state.pen })); }catch(e){}
   if(typeof syncScan==='function') syncScan(); }
 
 function load(){
   state.matches = buildFixtures(TEAMS);
   state.nom = blankNom();
   state.avail = {};
+  state.pen = {};
   let raw=null; try{ raw=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){}
   if(raw){
     state.theme  = raw.theme  || 'dark';
@@ -674,6 +707,7 @@ function load(){
       });
     }
     if(raw.avail && typeof raw.avail==='object') state.avail=raw.avail;
+    if(raw.pen && typeof raw.pen==='object') state.pen=raw.pen;
     if(raw.nom){ TEAMS.forEach(t=>{ const n=raw.nom[t.id]; if(n)
       state.nom[t.id]={PB:n.PB||[],BM:n.BM||[],TT:n.TT||[],CR:n.CR||[],CH:n.CH||[]}; }); }
   }
@@ -854,6 +888,63 @@ function nomIssues(tid){
     if(n>capFor(tid,p.id)) out.push(p.name+' is in '+n+' sports (cap '+capFor(tid,p.id)+')');
   });
   return out;
+}
+
+/* ============================ PARTICIPATION (§3.1) ============================
+   "Everyone plays at least once" is judged on court time, not on the team sheet:
+   a player counts as having played once they are named in a line-up, a Carrom
+   pair or a Chess round for a match that has actually started. */
+function playedSports(tid,pid){
+  const out={};
+  state.matches.forEach(m=>{
+    if(m.a!==tid&&m.b!==tid) return;
+    const started = SP[m.sport].kind==='racket' ? !!(m.log&&m.log.length) : (isPlayed(m)||isLive(m));
+    if(!started) return;
+    if(SP[m.sport].kind==='racket'){
+      if((((m.lineup||{})[tid])||[]).indexOf(pid)>=0) out[m.sport]=1;
+    } else if(m.sport==='CR'){
+      const pr=(m.pairs||{})[tid]||{};
+      Object.keys(pr).forEach(k=>{ if((pr[k]||[]).indexOf(pid)>=0) out.CR=1; });
+    } else if(m.sport==='CH'){
+      if(((m.players||{})[tid])===pid) out.CH=1;
+    }
+  });
+  return Object.keys(out);
+}
+const hasPlayed = (tid,pid) => playedSports(tid,pid).length>0;
+
+/* True once none of a player's nominated sports has any match left for this
+   team — at that point "not yet played" has become "never played". */
+function chancesLeft(tid,pid){
+  const mine=sportsOfPlayer(tid,pid);
+  /* A knockout slot with no teams drawn yet is still a chance — the team may
+     qualify — so an unplayed match with a TBD side counts in that player's
+     favour. Nobody is called out for a breach while a route to court remains. */
+  const open=m=>!isPlayed(m)&&(m.a===tid||m.b===tid||!m.a||!m.b);
+  if(!mine.length) return state.matches.some(open);
+  return state.matches.some(m=>mine.indexOf(m.sport)>=0&&open(m));
+}
+
+function participation(tid){
+  const t=teamById(tid), pool=squadIn(t);
+  const played=[], waiting=[], breach=[];
+  pool.forEach(p=>{
+    if(hasPlayed(tid,p.id)) played.push(p);
+    else if(chancesLeft(tid,p.id)) waiting.push(p);
+    else breach.push(p);
+  });
+  const unnamed=pool.filter(p=>!sportsOfPlayer(tid,p.id).length);
+  return {played:played, waiting:waiting, breach:breach, unnamed:unnamed, squad:pool.length};
+}
+
+/* ---------- penalties ---------- */
+const PEN_PER_PLAYER = 100;                 // suggested deduction per player who never played
+const penOf  = tid => (state.pen[tid]&&Number(state.pen[tid].pts))||0;
+const penNote= tid => (state.pen[tid]&&state.pen[tid].note)||'';
+function setPen(tid,pts,note){
+  pts=Math.max(0,Math.round(Number(pts)||0));
+  if(!pts) delete state.pen[tid]; else state.pen[tid]={pts:pts, note:note||''};
+  save();
 }
 
 /* ============================ RACKET SCORING ============================ */
@@ -1158,7 +1249,9 @@ function championship(){
     });
     const firsts=SPORT_ORDER.filter(sk=>cells[sk].rank===1).length;
     const seconds=SPORT_ORDER.filter(sk=>cells[sk].rank===2).length;
-    return {tid:t.id, cells:cells, total:total, firsts:firsts, seconds:seconds};
+    const pen=penOf(t.id);
+    return {tid:t.id, cells:cells, earned:total, pen:pen, total:total-pen,
+            firsts:firsts, seconds:seconds};
   });
   rows.sort((x,y)=> y.total-x.total || y.firsts-x.firsts || y.seconds-x.seconds
                     || teamById(x.tid).pos-teamById(y.tid).pos);
@@ -1320,16 +1413,21 @@ function ledger(){
       SPORT_ORDER.map(k=>{ const c=r.cells[k];
         return '<div class="ldg-cell'+(c.prov?' tbd':'')+'" data-sp="'+k+'">'+
           '<span class="rk">'+(c.rank||'–')+'</span><span class="pt">'+c.pts+'</span></div>'; }).join('')+
-      '<div class="ldg-tot"><b>'+r.total+'</b></div></div>';
+      '<div class="ldg-tot"><b>'+r.total+'</b>'+
+        (r.pen?'<span class="pen">−'+r.pen+'</span>':'')+'</div></div>';
   });
   h+='</div>';
   h+='<div class="row" style="margin-top:10px"><button class="btn sm" data-sharetable="1">Share the board</button></div>';
+  const pens=ch.rows.filter(r=>r.pen);
   const started=SPORT_ORDER.filter(sportStarted).length;
   h+='<p class="hint">Rank in each sport, then the points that rank earns. '+
      (started===0?'Nothing is played yet — the board fills in as results come in.'
       :ch.prov?'Greyed ranks are projections and firm up as the knockouts are played.'
       :'All five sports are complete.')+
      ' Top all five and you finish on 4,600.</p>';
+  if(pens.length) h+='<div class="alert warn"><span>⚠</span><span><b>Penalties applied</b><br>'+
+    pens.map(r=>esc(teamById(r.tid).name)+' −'+r.pen+(penNote(r.tid)?' · '+esc(penNote(r.tid)):'')).join('<br>')+
+    '</span></div>';
   return h;
 }
 
@@ -1531,6 +1629,55 @@ function viewTeams(){
   return h+'</div>';
 }
 
+/* Everyone plays at least once (§3.1). Shown as a running check through the
+   day: who has been on, who is still due, and who can no longer get on at all. */
+function participationBlock(t){
+  const pr=participation(t.id), done=pr.played.length, pen=penOf(t.id);
+  const pct=pr.squad?Math.round(done/pr.squad*100):0;
+  let h='<h2 class="sec" style="font-size:19px;margin-top:20px">Everyone plays once</h2>';
+  h+='<p class="hint">§3.1 — no squad member may go the whole league without playing. '+
+     'A player counts once they are named in a line-up, a Carrom pair or a Chess round for a match that has started.</p>';
+  h+='<div class="card" style="margin:9px 0"><div class="row" style="margin-bottom:7px">'+
+     '<b class="cond" style="font-size:20px">'+done+' of '+pr.squad+'</b>'+
+     '<span class="grow muted" style="font-size:11.5px">available players have taken the court</span></div>'+
+     '<div class="ldg-bar"><i style="width:'+pct+'%;background:var(--teal)"></i></div></div>';
+
+  if(pr.breach.length) h+='<div class="alert bad"><span>⚠</span><span><b>Rule breach · '+pr.breach.length+
+    ' player'+(pr.breach.length>1?'s':'')+' can no longer play</b><br>'+
+    pr.breach.map(p=>esc(p.name)+(sportsOfPlayer(t.id,p.id).length?'':' — never nominated')).join('<br>')+
+    '<br><span style="font-weight:400">Every sport they were named in is finished. This is a §3.1 breach for the Sports Committee.</span></span></div>';
+
+  if(pr.unnamed.length && !pr.breach.length) h+='<div class="alert warn"><span>⚠</span><span><b>Not nominated anywhere · '+
+    pr.unnamed.length+'</b><br>'+pr.unnamed.map(p=>esc(p.name)).join(', ')+
+    '<br><span style="font-weight:400">They must be named in at least one sport or the team breaches §3.1.</span></span></div>';
+
+  if(pr.waiting.length) h+='<div class="alert warn"><span>◷</span><span><b>Still to play · '+pr.waiting.length+
+    '</b><br>'+pr.waiting.map(p=>esc(p.name)+' <span class="dim">('+
+      (sportsOfPlayer(t.id,p.id).join(', ')||'no sport')+')</span>').join('<br>')+'</span></div>';
+
+  if(!pr.breach.length && !pr.waiting.length && !pr.unnamed.length && pr.squad)
+    h+='<div class="alert ok"><span>✓</span><span>Every available player has been on. §3.1 satisfied.</span></div>';
+
+  /* penalty */
+  const suggest=pr.breach.length*PEN_PER_PLAYER;
+  h+='<div class="eyebrow" style="margin:16px 2px 5px">Penalty</div>';
+  if(pen) h+='<div class="alert bad"><span>−</span><span><b>'+pen+' championship points deducted</b>'+
+    (penNote(t.id)?'<br>'+esc(penNote(t.id)):'')+'</span></div>';
+  else h+='<p class="hint" style="margin:0 2px 7px">No penalty on this team.</p>';
+  if(canEdit()){
+    h+='<div class="card" style="margin:0"><label class="fl">Deduction (championship points)</label>'+
+      '<div class="row"><input type="number" id="penpts_'+t.id+'" value="'+(pen||'')+'" placeholder="0" style="width:110px">'+
+      '<input type="text" id="pennote_'+t.id+'" value="'+esc(penNote(t.id))+'" placeholder="Reason — e.g. §3.1, two players unused" class="grow"></div>'+
+      '<div class="row" style="margin-top:9px;flex-wrap:wrap;gap:7px">'+
+      '<button class="btn sm pri" data-pensave="'+t.id+'">Apply</button>'+
+      (suggest?'<button class="btn sm" data-pensuggest="'+t.id+'|'+suggest+'">Use suggested '+suggest+'</button>':'')+
+      (pen?'<button class="btn sm dan" data-penclear="'+t.id+'">Remove penalty</button>':'')+'</div>'+
+      '<p class="hint">Deducted from the team\'s championship total. The rules set no fixed figure, so '+
+      PEN_PER_PLAYER+' points per unused player is only a suggestion — the Sports Committee decides.</p></div>';
+  }
+  return h;
+}
+
 function viewTeam(t){
   const issues=nomIssues(t.id), inSquad=squadIn(t), outSquad=squadOut(t);
   let h='<button class="btn sm" data-back="teams" style="margin:12px 0 0">← All teams</button>';
@@ -1570,6 +1717,10 @@ function viewTeam(t){
   if(canEdit()) h+='<div class="row" style="margin:10px 0"><button class="btn sm grow" data-auto="'+t.id+'">Auto-fill nominations</button>'+
     '<button class="btn sm grow" data-clearnom="'+t.id+'">Clear all</button></div>';
 
+  h+=participationBlock(t);
+  h+='<div class="row" style="margin:12px 0"><button class="btn sm grow" data-pdf="'+t.id+'">'+
+     'Export this team sheet</button><button class="btn sm grow" data-pdf="all">Export all eight</button></div>';
+
   /* --- squad rows --- */
   const row=p=>{
     const out=isOut(t.id,p.id), mine=sportsOfPlayer(t.id,p.id);
@@ -1598,6 +1749,74 @@ function viewTeam(t){
     h+='<div class="card flat" style="margin:0"><div class="roster">'+outSquad.map(row).join('')+'</div></div>';
   }
   return h;
+}
+
+/* ============================ TEAM SHEET (PRINT / PDF) ============================
+   Rendered into a hidden block and handed to the browser's print dialog, which
+   every phone and laptop can save as a PDF. No library, nothing to download. */
+function teamSheet(t){
+  const pr=participation(t.id), issues=nomIssues(t.id), inSq=squadIn(t), outSq=squadOut(t);
+  const d=new Date(), stamp=d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+
+    ' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  let h='<div class="sheet">';
+  h+='<div class="phd"><img src="'+LOGO+'" alt=""><div><h1>'+esc(t.name)+'</h1>'+
+     '<div class="sub">Odyssey Sports League 2026 · Team Sheet</div></div>'+
+     '<div class="rt">'+esc(t.owners)+'<br>Printed '+esc(stamp)+'</div></div>';
+
+  h+='<h2>Nominations by sport</h2><table><tr><th>Sport</th><th class="c">Req</th><th class="c">M</th>'+
+     '<th class="c">W</th><th>Players nominated</th></tr>';
+  SPORT_ORDER.forEach(sk=>{
+    const sp=SP[sk], list=nomOf(t.id,sk);
+    const names=list.map(pid=>esc(pName(pid))+(pOf(pid).g==='F'?' (W)':'')).join(', ')||'—';
+    h+='<tr><td><b>'+esc(sp.name)+'</b></td><td class="c">'+(sp.kind==='racket'?'5M+1F':sp.min)+'</td>'+
+      '<td class="c">'+nomBy(t.id,sk,'M')+'</td><td class="c">'+nomBy(t.id,sk,'F')+'</td>'+
+      '<td>'+names+'</td></tr>';
+  });
+  h+='</table><p class="note">Racket sports: 6 compulsory (5 men + 1 woman), up to 8. Carrom 2–4, Chess 1–2, both gender-neutral. '+
+     'Maximum two sports per player; a team\'s only available woman may play all three racket sports.</p>';
+
+  h+='<h2>Squad · '+inSq.length+' available'+(outSq.length?' · '+outSq.length+' unavailable':'')+'</h2>';
+  h+='<table><tr><th>#</th><th>Player</th><th>Category</th><th class="c">M/W</th>'+
+     SPORT_ORDER.map(k=>'<th class="c">'+k+'</th>').join('')+'<th class="c">Sports</th><th class="c">Played</th></tr>';
+  const line=(p,i,out)=>{
+    const mine=sportsOfPlayer(t.id,p.id), pl=playedSports(t.id,p.id);
+    return '<tr'+(out?' class="out"':'')+'><td class="c">'+i+'</td>'+
+      '<td>'+esc(p.name)+(p.owner?' <b>(Owner)</b>':'')+(out?' — unavailable':'')+'</td>'+
+      '<td>'+esc(CATS[p.cat].label)+'</td><td class="c">'+(p.g==='F'?'W':'M')+'</td>'+
+      SPORT_ORDER.map(k=>'<td class="c '+(mine.indexOf(k)>=0?'yes':'no')+'">'+(mine.indexOf(k)>=0?'●':'·')+'</td>').join('')+
+      '<td class="c">'+mine.length+'</td><td class="c">'+(pl.length?pl.join(' '):'—')+'</td></tr>';
+  };
+  inSq.forEach((p,i)=>h+=line(p,i+1,false));
+  outSq.forEach((p,i)=>h+=line(p,inSq.length+i+1,true));
+  h+='</table>';
+
+  h+='<h2>Compliance</h2>';
+  if(issues.length) h+='<div class="warn"><b>Nomination issues</b><br>'+issues.map(esc).join('<br>')+'</div>';
+  else h+='<div class="okbox"><b>Nominations legal for all five sports.</b></div>';
+  h+='<div class="'+(pr.breach.length?'warn':'okbox')+'"><b>§3.1 everyone plays once — '+
+     pr.played.length+' of '+pr.squad+' available players have taken the court.</b>'+
+     (pr.waiting.length?'<br>Still to play: '+pr.waiting.map(p=>esc(p.name)).join(', '):'')+
+     (pr.breach.length?'<br><b>Breach — can no longer play: '+pr.breach.map(p=>esc(p.name)).join(', ')+'</b>':'')+
+     '</div>';
+  if(penOf(t.id)) h+='<div class="warn"><b>Penalty: −'+penOf(t.id)+' championship points.</b>'+
+     (penNote(t.id)?' '+esc(penNote(t.id)):'')+'</div>';
+
+  h+='<div class="sign"><div>Team Captain — name &amp; signature</div>'+
+     '<div>Sports Committee — name &amp; signature</div></div>';
+  return h+'</div>';
+}
+
+function printSheets(){
+  if(!state.print) return '';
+  const list=state.print==='all'?TEAMS:[teamById(state.print)].filter(Boolean);
+  return list.map(teamSheet).join('');
+}
+/* Paint the sheets, let the browser lay them out, then open the print dialog —
+   "Save as PDF" on desktop, Share → Print on a phone. */
+function doPrint(which){
+  state.print=which; render();
+  setTimeout(()=>{ window.print();
+    setTimeout(()=>{ state.print=null; render(); },400); },160);
 }
 
 /* ============================ RULES ============================ */
@@ -1635,7 +1854,7 @@ const RULES=[
   '<li>Carrom: <b>2 compulsory</b>, up to 4 · gender-neutral</li>'+
   '<li>Chess: <b>1 compulsory</b>, up to 2 · gender-neutral</li></ul>'+
   '<p>Every player may play a maximum of <b>two sports</b>. The only exception: if a team has just one woman available she plays all three racket sports. A third sport is never allowed for a male player. Everyone in the squad must play at least one sport across the league.</p>'+
-  '<p><b>Live sync.</b> Turn it on from the header pill on every device before the first match. Each device keeps scoring even with no signal — changes queue and go out when the connection returns. Only devices in Scorer mode publish; the rest just receive.</p>'+
+  '<p><b>Live sync.</b> On by default — open the link on any phone and it follows the live results, no setting up. Each device keeps scoring even with no signal; changes queue and go out when the connection returns. Only devices in Scorer mode publish, so a spectator can never change a score.</p>'+
   '<p><b>Match-day availability.</b> Mark anyone who cannot make it as unavailable on the team page. They drop out of every nomination and every count, so the quotas above are checked against the players who are actually there — and the sole-woman exception applies to the women available on the day.</p>'],
  ['Carrom',
   '<p>A pure league — each team plays all seven others. Every match is <b>two boards</b>; the higher combined score across both boards wins the match, and equal aggregate is a draw.</p>'+
@@ -2038,9 +2257,13 @@ function settingsModal(){
     TEAMS.map(t=>'<option value="'+t.id+'"'+(state.myTeam===t.id?' selected':'')+'>'+esc(t.name)+'</option>').join('')+'</select></div>';
   h+='<div style="margin:14px 0"><label class="fl">Live sync across devices</label>'+
     '<p class="hint" style="margin:0 0 7px">'+
-    ({off:'Off — results stay on this device.',sync:'Connecting…',live:'On — sharing results live.',
-      off_line:'On, but no connection right now.',error:'On, but reporting an error.'}[sync.status]||'')+'</p>'+
-    '<button class="btn'+(sync.on?'':' pri')+'" data-syncmodal="1">'+(sync.on?'Sync settings':'Set up live sync')+'</button></div>';
+    (!sync.on?'Off — results stay on this device.'
+      :sync.status==='live'?(state.scorer?'On — this device publishes results and receives everyone else\'s.'
+                                         :'On — receiving results live from the scoring devices.')
+      :sync.status==='sync'?'Connecting…'
+      :sync.status==='off_line'?'On, but no connection right now. It will catch up by itself.'
+      :'On, but reporting an error.')+'</p>'+
+    '<button class="btn'+(sync.on?'':' pri')+'" data-syncmodal="1">'+(sync.on?'Sync settings':'Turn live sync on')+'</button></div>';
   h+='<div style="margin:14px 0"><label class="fl">Data</label><div class="row" style="flex-wrap:wrap;gap:7px">'+
     '<button class="btn sm" data-export="1">Export backup</button>'+
     '<button class="btn sm" data-import="1">Import backup</button>'+
@@ -2057,7 +2280,12 @@ function autoLineup(m,tid){
   const nom=nomOf(tid,m.sport).filter(p=>isIn(tid,p));
   if(nom.length<6) return false;
   const rank={MPB:0,MTT:0,MBM:0,GA:1,WM:2,GB:3,WG:4};
-  const by=g=>nom.filter(p=>pOf(p).g===g).sort((x,y)=>rank[pOf(x).cat]-rank[pOf(y).cat]);
+  /* In the group stage the suggestion favours squad members who have not been
+     on court yet, which is how a team satisfies §3.1 without anyone tracking it
+     by hand. Knockouts ignore that and pick the strongest legal six (§2.6). */
+  const spread = (m.stage==='group'||m.stage==='league');
+  const by=g=>nom.filter(p=>pOf(p).g===g).sort((x,y)=>
+    (spread?(hasPlayed(tid,x)?1:0)-(hasPlayed(tid,y)?1:0):0) || rank[pOf(x).cat]-rank[pOf(y).cat]);
   let men=by('M'), wom=by('F');
   if(!wom.length||men.length<4) return false;
   const mq=marqueeOf(tid,m.sport);
@@ -2091,7 +2319,7 @@ const SYNC_KEY   = 'osl2026sync';
 const PULL_MS    = 4000;      // how often a device asks for changes
 const PUSH_MS    = 600;       // debounce on outgoing changes
 
-let sync = { on:false, event:'osl2026', device:'', status:'off', note:'',
+let sync = { on:true, event:'osl2026', device:'', status:'off', note:'',
              cursor:null, rev:{}, sent:{}, dirty:{}, busy:false, lastOk:0, pending:0 };
 let pullTimer=null, pushTimer=null;
 
@@ -2099,9 +2327,12 @@ function syncSave(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify({
   on:sync.on, event:sync.event, device:sync.device,
   cursor:sync.cursor, rev:sync.rev, sent:sync.sent })); }catch(e){} }
 
+/* Sync is on out of the box. A phone that just opens the link starts receiving
+   results with nothing to set up; it can only ever receive, because publishing
+   needs Scorer mode. A device is only left off if someone switched it off here. */
 function syncLoad(){
   let r=null; try{ r=JSON.parse(localStorage.getItem(SYNC_KEY)||'null'); }catch(e){}
-  if(r){ sync.on=!!r.on; sync.event=r.event||'osl2026';
+  if(r){ sync.on=(r.on!==false); sync.event=r.event||'osl2026';
          sync.device=r.device||''; sync.cursor=r.cursor||null;
          sync.rev=r.rev||{}; sync.sent=r.sent||{}; }
   if(!sync.device) sync.device='Device '+Math.random().toString(36).slice(2,6).toUpperCase();
@@ -2111,6 +2342,7 @@ function syncLoad(){
 const K_MATCH = id  => sync.event+':m:'+id;
 const K_NOM   = tid => sync.event+':nom:'+tid;
 const K_AV    = tid => sync.event+':av:'+tid;
+const K_PEN   = tid => sync.event+':pen:'+tid;
 
 function matchPayload(m){
   return { a:m.a||null, b:m.b||null, done:!!m.done,
@@ -2134,7 +2366,8 @@ function syncSnapshot(){
   const o={};
   state.matches.forEach(m=>{ o[K_MATCH(m.id)]=matchPayload(m); });
   TEAMS.forEach(t=>{ o[K_NOM(t.id)]=state.nom[t.id]||{};
-                     o[K_AV(t.id)]=state.avail[t.id]||{}; });
+                     o[K_AV(t.id)]=state.avail[t.id]||{};
+                     o[K_PEN(t.id)]=state.pen[t.id]||{}; });
   return o;
 }
 
@@ -2232,6 +2465,8 @@ async function syncPull(force){
       if(kind==='m')   hit=applyMatch(id,r.data);
       if(kind==='nom' && teamById(id)){ state.nom[id]=r.data||state.nom[id]; hit=true; }
       if(kind==='av'  && teamById(id)){ state.avail[id]=r.data||{}; hit=true; }
+      if(kind==='pen' && teamById(id)){ const d=r.data||{};
+        if(d && d.pts) state.pen[id]=d; else delete state.pen[id]; hit=true; }
       if(!hit) return;
       sync.rev[r.key]=r.rev; changed++;
     });
@@ -2240,7 +2475,7 @@ async function syncPull(force){
       syncKnockouts();
       try{ localStorage.setItem(STORE_KEY, JSON.stringify({ v:APP_VER, theme:state.theme,
         scorer:state.scorer, pin:state.pin, myTeam:state.myTeam,
-        matches:state.matches, nom:state.nom, avail:state.avail })); }catch(e){}
+        matches:state.matches, nom:state.nom, avail:state.avail, pen:state.pen })); }catch(e){}
       const snap=syncSnapshot();                                // adopt as our baseline
       Object.keys(snap).forEach(k=>{ if(!sync.dirty[k]) sync.sent[k]=JSON.stringify(snap[k]); });
     }
@@ -2285,8 +2520,9 @@ function syncAlertHTML(){
 function syncModal(){
   const ago=sync.lastOk?Math.round((Date.now()-sync.lastOk)/1000)+'s ago':'never';
   let h='<h3>Live sync</h3>'+
-    '<p class="hint" style="margin-bottom:12px">Every device with this page open shares one set of results. '+
-    'Scoring keeps working with no signal — changes queue up and go out when the connection returns.</p>';
+    '<p class="hint" style="margin-bottom:12px">On by default — open the link on any phone and it follows the '+
+    'live results with nothing to set up. Scoring keeps working with no signal; changes queue up and go out '+
+    'when the connection returns.</p>';
   h+='<div class="alert '+syncAlertCls()+'" id="syncstat">'+syncAlertHTML()+'</div>';
   h+='<div style="margin:14px 0"><label class="fl">This device</label>'+
      '<input type="text" id="devin" value="'+esc(sync.device)+'" placeholder="Court 1 · Ravi">'+
@@ -2298,9 +2534,13 @@ function syncModal(){
      (sync.on?'<button class="btn" data-syncoff="1">Turn sync off</button>'
              :'<button class="btn pri" data-syncon="1">Turn sync on</button>')+
      '<button class="btn sm" data-syncpull="1">Pull now</button>'+
-     '<button class="btn sm" data-syncpush="1">Publish this device</button></div>';
-  h+='<p class="hint">Only devices in <b>Scorer mode</b> send results; everyone else just receives them. '+
-     '<b>Publish this device</b> overwrites the shared copy with what is on this screen — use it to seed the event, not mid-match.</p>';
+     (state.scorer?'<button class="btn sm" data-syncpush="1">Publish this device</button>':'')+'</div>';
+  h+='<div class="alert '+(state.scorer?'warn':'ok')+'" style="margin-top:4px"><span>'+(state.scorer?'✎':'👁')+'</span><span><b>'+
+     (state.scorer?'This device publishes':'This device only receives')+'</b><br>'+
+     (state.scorer?'Scorer mode is on, so every point recorded here goes out to the other devices.'
+                  :'Scorer mode is off. It reads the live results and can never change them.')+'</span></div>';
+  if(state.scorer) h+='<p class="hint"><b>Publish this device</b> overwrites the shared copy with everything on '+
+     'this screen — use it once to seed the event from the master device, not mid-match.</p>';
   h+='<button class="btn pri" style="width:100%;margin-top:10px" data-close="1">Close</button>';
   return h;
 }
@@ -2352,6 +2592,7 @@ function render(){
      '<button class="'+(!state.openMatch&&state.tab===n[0]?'on':'')+'" data-go="'+n[0]+'">'+
      '<svg viewBox="0 0 24 24"><path d="'+n[2]+'"/></svg>'+n[1]+'</button>').join('')+'</div></nav>'+
    '<div class="toast" id="toast"></div>'+
+   '<div id="printarea">'+printSheets()+'</div>'+
    (modal?'<div class="ov" data-ovc="1"><div class="md">'+modal+'</div></div>':'');
   startSwitchTimer();
 }
@@ -2461,6 +2702,17 @@ document.addEventListener('click',e=>{
     setAvail(tid,pid,to==='in'); save();
     toast(to==='in'?pName(pid)+' is back in':pName(pid)+' is out — nominations cleared');
     return render(); }
+  if((el=g('data-pdf'))){ const w=el.getAttribute('data-pdf');
+    toast(w==='all'?'Preparing all eight team sheets…':'Preparing the team sheet…');
+    return doPrint(w); }
+  if((el=g('data-pensave'))){ const tid=el.getAttribute('data-pensave');
+    const pts=($('#penpts_'+tid)||{}).value, note=($('#pennote_'+tid)||{}).value;
+    setPen(tid,pts,note); toast(Number(pts)>0?'Penalty applied':'Penalty removed'); return render(); }
+  if((el=g('data-pensuggest'))){ const [tid,pts]=el.getAttribute('data-pensuggest').split('|');
+    const pr=participation(tid);
+    setPen(tid,pts,'§3.1 — '+pr.breach.length+' player'+(pr.breach.length>1?'s':'')+' did not play');
+    toast('Suggested penalty applied'); return render(); }
+  if((el=g('data-penclear'))){ setPen(el.getAttribute('data-penclear'),0,''); toast('Penalty removed'); return render(); }
   if((el=g('data-auto'))){ autoNominate(el.getAttribute('data-auto')); save(); toast('Nominations filled'); return render(); }
   if((el=g('data-clearnom'))){ const tid=el.getAttribute('data-clearnom');
     if(!confirm('Clear every nomination for this team?')) return;
@@ -2469,7 +2721,11 @@ document.addEventListener('click',e=>{
   if((el=g('data-scorer'))){
     if(el.getAttribute('data-scorer')==='off'){ state.scorer=false; save(); return openModal(settingsModal()); }
     const v=($('#pinin')||{}).value;
-    if(v===state.pin){ state.scorer=true; save(); toast('Scorer mode on'); return openModal(settingsModal()); }
+    if(v===state.pin){ state.scorer=true; save();
+      if(sync.on){ toast('Scorer mode on — fetching the latest results');
+        syncPull(true).then(()=>{ if(modal) openModal(settingsModal()); }); }
+      else toast('Scorer mode on');
+      return openModal(settingsModal()); }
     toast('Wrong PIN'); return;
   }
   if(g('data-export')){
@@ -2535,6 +2791,7 @@ syncLoad();
 load();
 render();
 if(sync.on){ if(!Object.keys(sync.sent).length) syncBaseline(); syncStart(); }
+else syncStatus('off');
 /* Come back from a locked screen or a backgrounded tab with the latest scores. */
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&sync.on) syncPull(false); });
 setInterval(()=>{ if(document.getElementById('syncstat')) syncChrome(); },1000);
