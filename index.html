@@ -1651,9 +1651,13 @@ function participationBlock(t){
     pr.unnamed.length+'</b><br>'+pr.unnamed.map(p=>esc(p.name)).join(', ')+
     '<br><span style="font-weight:400">They must be named in at least one sport or the team breaches §3.1.</span></span></div>';
 
-  if(pr.waiting.length) h+='<div class="alert warn"><span>◷</span><span><b>Still to play · '+pr.waiting.length+
-    '</b><br>'+pr.waiting.map(p=>esc(p.name)+' <span class="dim">('+
-      (sportsOfPlayer(t.id,p.id).join(', ')||'no sport')+')</span>').join('<br>')+'</span></div>';
+  const dayOn=state.matches.some(m=>isPlayed(m)||isLive(m));
+  if(pr.waiting.length && !dayOn)
+    h+='<div class="alert warn"><span>◷</span><span>The day has not started — every player is still to come on.</span></div>';
+  else if(pr.waiting.length)
+    h+='<div class="alert warn"><span>◷</span><span><b>Still to play · '+pr.waiting.length+
+      '</b><br>'+pr.waiting.map(p=>esc(p.name)+' <span class="dim">('+
+        (sportsOfPlayer(t.id,p.id).join(', ')||'no sport')+')</span>').join('<br>')+'</span></div>';
 
   if(!pr.breach.length && !pr.waiting.length && !pr.unnamed.length && pr.squad)
     h+='<div class="alert ok"><span>✓</span><span>Every available player has been on. §3.1 satisfied.</span></div>';
@@ -1717,9 +1721,7 @@ function viewTeam(t){
   if(canEdit()) h+='<div class="row" style="margin:10px 0"><button class="btn sm grow" data-auto="'+t.id+'">Auto-fill nominations</button>'+
     '<button class="btn sm grow" data-clearnom="'+t.id+'">Clear all</button></div>';
 
-  h+=participationBlock(t);
-  h+='<div class="row" style="margin:12px 0"><button class="btn sm grow" data-pdf="'+t.id+'">'+
-     'Export this team sheet</button><button class="btn sm grow" data-pdf="all">Export all eight</button></div>';
+
 
   /* --- squad rows --- */
   const row=p=>{
@@ -1748,6 +1750,10 @@ function viewTeam(t){
     h+='<p class="hint" style="margin:0 2px 6px">Left out of every count and quota until they are marked back in.</p>';
     h+='<div class="card flat" style="margin:0"><div class="roster">'+outSquad.map(row).join('')+'</div></div>';
   }
+
+  h+=participationBlock(t);
+  h+='<div class="row" style="margin:14px 0 4px"><button class="btn sm grow" data-pdf="'+t.id+'">'+
+     'Export this team sheet</button><button class="btn sm grow" data-pdf="all">Export all eight</button></div>';
   return h;
 }
 
@@ -2263,7 +2269,7 @@ function settingsModal(){
       :sync.status==='sync'?'Connecting…'
       :sync.status==='off_line'?'On, but no connection right now. It will catch up by itself.'
       :'On, but reporting an error.')+'</p>'+
-    '<button class="btn'+(sync.on?'':' pri')+'" data-syncmodal="1">'+(sync.on?'Sync settings':'Turn live sync on')+'</button></div>';
+    '<button class="btn'+(sync.on?'':' pri')+'" data-syncmodal="1">'+(sync.on?'Sync status':'Turn live sync on')+'</button></div>';
   h+='<div style="margin:14px 0"><label class="fl">Data</label><div class="row" style="flex-wrap:wrap;gap:7px">'+
     '<button class="btn sm" data-export="1">Export backup</button>'+
     '<button class="btn sm" data-import="1">Import backup</button>'+
@@ -2320,7 +2326,8 @@ const PULL_MS    = 4000;      // how often a device asks for changes
 const PUSH_MS    = 600;       // debounce on outgoing changes
 
 let sync = { on:true, event:'osl2026', device:'', status:'off', note:'',
-             cursor:null, rev:{}, sent:{}, dirty:{}, busy:false, lastOk:0, pending:0 };
+             cursor:null, rev:{}, sent:{}, dirty:{}, busy:false, pulling:false,
+             lastOk:0, lastPull:0, pending:0, seen:0, log:[] };
 let pullTimer=null, pushTimer=null;
 
 function syncSave(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify({
@@ -2393,6 +2400,10 @@ function syncBaseline(){
   sync.dirty={}; sync.pending=0; syncSave();
 }
 
+function syncLog(msg){
+  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  sync.log.unshift(t+' · '+msg); if(sync.log.length>8) sync.log.pop();
+}
 function syncStatus(s,note){ sync.status=s; sync.note=note||''; syncChrome(); }
 /* Repaint just the header pill — a full render would fight with what the
    referee is doing mid-rally. */
@@ -2440,15 +2451,17 @@ async function syncPush(){
     });
     sync.pending=Object.keys(sync.dirty).length;
     sync.lastOk=Date.now(); syncSave(); syncStatus('live');
+    syncLog('sent '+batch.length+' change'+(batch.length>1?'s':''));
     if(sync.pending) schedulePush();
-  }catch(e){ syncStatus('off_line', String(e.message||e)); }
+    else setTimeout(()=>syncPull(false),150);   // pick up the other courts straight away
+  }catch(e){ syncLog('send failed: '+(e.message||e)); syncStatus('off_line', String(e.message||e)); }
   finally{ sync.busy=false; }
 }
 
 /* ---------- pull ---------- */
 async function syncPull(force){
-  if(!sync.on||sync.busy) return;
-  sync.busy=true; if(sync.status!=='live') syncStatus('sync');
+  if(!sync.on||sync.pulling) return;
+  sync.pulling=true; if(sync.status!=='live') syncStatus('sync');
   try{
     const since=(force?null:sync.cursor);
     const q='/rest/v1/osl_live?select=key,data,rev,updated_at&order=updated_at.asc&limit=500'+
@@ -2458,7 +2471,9 @@ async function syncPull(force){
     (rows||[]).forEach(r=>{
       if(r.key.indexOf(sync.event+':')!==0) return;
       if(!newest||r.updated_at>newest) newest=r.updated_at;
-      if((sync.rev[r.key]||0)>=r.rev) return;                  // we hold this or newer
+      const localRev=sync.rev[r.key]||0, remoteStr=JSON.stringify(r.data);
+      if(r.rev<localRev) return;                               // ours is newer
+      if(r.rev===localRev && sync.sent[r.key]===remoteStr) return;  // same row, nothing to do
       if(sync.dirty[r.key]) return;                            // our own edit is still queued
       const parts=r.key.split(':'), kind=parts[1], id=parts.slice(2).join(':');
       let hit=false;
@@ -2468,7 +2483,7 @@ async function syncPull(force){
       if(kind==='pen' && teamById(id)){ const d=r.data||{};
         if(d && d.pts) state.pen[id]=d; else delete state.pen[id]; hit=true; }
       if(!hit) return;
-      sync.rev[r.key]=r.rev; changed++;
+      sync.rev[r.key]=r.rev; sync.sent[r.key]=remoteStr; changed++;
     });
     sync.cursor=newest;
     if(changed){
@@ -2479,10 +2494,12 @@ async function syncPull(force){
       const snap=syncSnapshot();                                // adopt as our baseline
       Object.keys(snap).forEach(k=>{ if(!sync.dirty[k]) sync.sent[k]=JSON.stringify(snap[k]); });
     }
-    sync.lastOk=Date.now(); syncSave(); syncStatus('live');
+    sync.lastOk=Date.now(); sync.lastPull=Date.now(); sync.seen=(rows||[]).length;
+    syncSave(); syncStatus('live');
+    syncLog(changed?('received '+changed+' change'+(changed>1?'s':'')):'checked · nothing new');
     if(changed && !modal) render();
-  }catch(e){ syncStatus('off_line', String(e.message||e)); }
-  finally{ sync.busy=false; }
+  }catch(e){ syncLog('pull failed: '+(e.message||e)); syncStatus('off_line', String(e.message||e)); }
+  finally{ sync.pulling=false; }
 }
 
 function syncStart(){
@@ -2530,11 +2547,21 @@ function syncModal(){
   h+='<div style="margin:14px 0"><label class="fl">Event code</label>'+
      '<input type="text" id="evin" value="'+esc(sync.event)+'" placeholder="osl2026">'+
      '<p class="hint">All devices must use the same code. Change it to run a second event without mixing results.</p></div>';
+  h+='<div class="eyebrow" style="margin:16px 2px 5px">Activity</div>'+
+     '<div class="card" style="margin:0;font-size:11px;line-height:1.8;color:var(--muted)">'+
+     (sync.log.length?sync.log.map(esc).join('<br>'):'Nothing yet — the first check runs within a few seconds.')+
+     '</div>'+
+     '<p class="hint">Checks for changes every '+(PULL_MS/1000)+' seconds on its own. '+
+     'You never need to press anything.</p>';
   h+='<div class="row" style="flex-wrap:wrap;gap:7px;margin:14px 0">'+
      (sync.on?'<button class="btn" data-syncoff="1">Turn sync off</button>'
              :'<button class="btn pri" data-syncon="1">Turn sync on</button>')+
-     '<button class="btn sm" data-syncpull="1">Pull now</button>'+
-     (state.scorer?'<button class="btn sm" data-syncpush="1">Publish this device</button>':'')+'</div>';
+     '<button class="btn sm" data-syncpull="1">Check now</button>'+
+     (state.scorer?'<button class="btn sm" data-syncpush="1">Re-send everything</button>':'')+'</div>';
+  h+='<p class="hint"><b>Check now</b> just does early what the app already does every few seconds — '+
+     'it is only there for reassurance.'+
+     (state.scorer?' <b>Re-send everything</b> pushes this whole device up as the shared copy; '+
+       'use it once to seed the event, or to recover if a device was wiped. Not during a match.':'')+'</p>';
   h+='<div class="alert '+(state.scorer?'warn':'ok')+'" style="margin-top:4px"><span>'+(state.scorer?'✎':'👁')+'</span><span><b>'+
      (state.scorer?'This device publishes':'This device only receives')+'</b><br>'+
      (state.scorer?'Scorer mode is on, so every point recorded here goes out to the other devices.'
