@@ -59,6 +59,11 @@ html[data-theme="dark"] .mark{filter:drop-shadow(0 0 1px rgba(255,255,255,.55))}
   color:var(--muted);display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.04em}
 .ibtn:hover{color:var(--text);border-color:var(--lineL)}
 .ibtn.on{color:var(--onAccent);background:var(--gold);border-color:var(--gold)}
+.ibtn.sync{gap:5px}
+.ibtn.sync.live{color:var(--tealInk);border-color:rgba(46,196,160,.45)}
+.ibtn.sync.sync{color:var(--gold);border-color:rgba(244,181,63,.45)}
+.ibtn.sync.off_line,.ibtn.sync.error{color:var(--redInk);border-color:rgba(232,69,92,.45)}
+.ibtn.sync .dot{width:5px;height:5px}
 
 /* ---------- bottom nav ---------- */
 nav.bn{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--ink2);border-top:1px solid var(--line);
@@ -640,7 +645,8 @@ function blankNom(){ const n={}; TEAMS.forEach(t=>{ n[t.id]={PB:[],BM:[],TT:[],C
 
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify({
   v:APP_VER, theme:state.theme, scorer:state.scorer, pin:state.pin, myTeam:state.myTeam,
-  matches:state.matches, nom:state.nom, avail:state.avail })); }catch(e){} }
+  matches:state.matches, nom:state.nom, avail:state.avail })); }catch(e){}
+  if(typeof syncScan==='function') syncScan(); }
 
 function load(){
   state.matches = buildFixtures(TEAMS);
@@ -1629,6 +1635,7 @@ const RULES=[
   '<li>Carrom: <b>2 compulsory</b>, up to 4 · gender-neutral</li>'+
   '<li>Chess: <b>1 compulsory</b>, up to 2 · gender-neutral</li></ul>'+
   '<p>Every player may play a maximum of <b>two sports</b>. The only exception: if a team has just one woman available she plays all three racket sports. A third sport is never allowed for a male player. Everyone in the squad must play at least one sport across the league.</p>'+
+  '<p><b>Live sync.</b> Turn it on from the header pill on every device before the first match. Each device keeps scoring even with no signal — changes queue and go out when the connection returns. Only devices in Scorer mode publish; the rest just receive.</p>'+
   '<p><b>Match-day availability.</b> Mark anyone who cannot make it as unavailable on the team page. They drop out of every nomination and every count, so the quotas above are checked against the players who are actually there — and the sole-woman exception applies to the women available on the day.</p>'],
  ['Carrom',
   '<p>A pure league — each team plays all seven others. Every match is <b>two boards</b>; the higher combined score across both boards wins the match, and equal aggregate is a draw.</p>'+
@@ -2029,6 +2036,11 @@ function settingsModal(){
   h+='<div style="margin:14px 0"><label class="fl">Follow a team</label>'+
     '<select data-myteam="1"><option value="">No team</option>'+
     TEAMS.map(t=>'<option value="'+t.id+'"'+(state.myTeam===t.id?' selected':'')+'>'+esc(t.name)+'</option>').join('')+'</select></div>';
+  h+='<div style="margin:14px 0"><label class="fl">Live sync across devices</label>'+
+    '<p class="hint" style="margin:0 0 7px">'+
+    ({off:'Off — results stay on this device.',sync:'Connecting…',live:'On — sharing results live.',
+      off_line:'On, but no connection right now.',error:'On, but reporting an error.'}[sync.status]||'')+'</p>'+
+    '<button class="btn'+(sync.on?'':' pri')+'" data-syncmodal="1">'+(sync.on?'Sync settings':'Set up live sync')+'</button></div>';
   h+='<div style="margin:14px 0"><label class="fl">Data</label><div class="row" style="flex-wrap:wrap;gap:7px">'+
     '<button class="btn sm" data-export="1">Export backup</button>'+
     '<button class="btn sm" data-import="1">Import backup</button>'+
@@ -2057,6 +2069,240 @@ function autoLineup(m,tid){
   [0,2,3,4,1].forEach(i=>{ if(six[i]==null && men.length) six[i]=men.shift(); });
   if(six.some(x=>!x)) return false;
   m.lineup=Object.assign({},m.lineup); m.lineup[tid]=six; return true;
+}
+
+
+/* ============================================================================
+   LIVE SYNC
+   The app is offline-first: every change is written to this device immediately
+   and the tables are always correct locally. Sync copies those changes to the
+   other devices through a Supabase table, one row per match / team, and merges
+   what comes back. If the venue wifi drops, scoring carries on and the backlog
+   goes up the moment the connection returns.
+
+   Conflict rule: each row carries a revision counter. A device only accepts a
+   row whose revision is higher than the one it holds, and the server refuses a
+   write whose revision is lower than the row already stored — so a device that
+   has been offline with stale data cannot overwrite newer scoring.
+   ========================================================================== */
+const SUPA_URL   = 'https://utfvjsvvbifwcektzrwj.supabase.co';
+const SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZnZqc3Z2Ymlmd2Nla3R6cndqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMTAxNzIsImV4cCI6MjEwMTc4NjE3Mn0.gSi-EVADM6NvnQiWN2TahSGNTtys3skyFpAf-E8qoSA';
+const SYNC_KEY   = 'osl2026sync';
+const PULL_MS    = 4000;      // how often a device asks for changes
+const PUSH_MS    = 600;       // debounce on outgoing changes
+
+let sync = { on:false, event:'osl2026', device:'', status:'off', note:'',
+             cursor:null, rev:{}, sent:{}, dirty:{}, busy:false, lastOk:0, pending:0 };
+let pullTimer=null, pushTimer=null;
+
+function syncSave(){ try{ localStorage.setItem(SYNC_KEY, JSON.stringify({
+  on:sync.on, event:sync.event, device:sync.device,
+  cursor:sync.cursor, rev:sync.rev, sent:sync.sent })); }catch(e){} }
+
+function syncLoad(){
+  let r=null; try{ r=JSON.parse(localStorage.getItem(SYNC_KEY)||'null'); }catch(e){}
+  if(r){ sync.on=!!r.on; sync.event=r.event||'osl2026';
+         sync.device=r.device||''; sync.cursor=r.cursor||null;
+         sync.rev=r.rev||{}; sync.sent=r.sent||{}; }
+  if(!sync.device) sync.device='Device '+Math.random().toString(36).slice(2,6).toUpperCase();
+}
+
+/* ---------- what each row holds ---------- */
+const K_MATCH = id  => sync.event+':m:'+id;
+const K_NOM   = tid => sync.event+':nom:'+tid;
+const K_AV    = tid => sync.event+':av:'+tid;
+
+function matchPayload(m){
+  return { a:m.a||null, b:m.b||null, done:!!m.done,
+           log:m.log||null, lineup:m.lineup||null, acked:m.acked||null, pos:m.pos||null,
+           startLeft:m.startLeft||null, invert:!!m.invert,
+           boards:m.boards||null, pairs:m.pairs||null,
+           result:m.result===undefined?null:m.result, players:m.players||null };
+}
+function applyMatch(id,d){
+  const m=state.matches.find(x=>x.id===id); if(!m||!d) return false;
+  if(d.a!==undefined&&d.a) m.a=d.a; if(d.b!==undefined&&d.b) m.b=d.b;
+  ['log','lineup','acked','pos','startLeft','boards','pairs','players'].forEach(k=>{
+    if(d[k]!==undefined&&d[k]!==null) m[k]=d[k]; });
+  if(d.result!==undefined) m.result=d.result;
+  m.invert=!!d.invert; m.done=!!d.done;
+  return true;
+}
+
+/* Every syncable row, as a { key: payloadObject } map. */
+function syncSnapshot(){
+  const o={};
+  state.matches.forEach(m=>{ o[K_MATCH(m.id)]=matchPayload(m); });
+  TEAMS.forEach(t=>{ o[K_NOM(t.id)]=state.nom[t.id]||{};
+                     o[K_AV(t.id)]=state.avail[t.id]||{}; });
+  return o;
+}
+
+/* Compare the current state with what this device last sent and queue the
+   difference. Called after every save, so no scoring code has to remember to. */
+function syncScan(){
+  if(!sync.on) return;
+  const snap=syncSnapshot(), scoring=state.scorer; let n=0;
+  Object.keys(snap).forEach(k=>{
+    const s=JSON.stringify(snap[k]);
+    if(sync.sent[k]===s) return;
+    if(!scoring){ sync.sent[k]=s; return; }   // a viewing device never publishes
+    sync.dirty[k]=s; sync.rev[k]=(sync.rev[k]||0)+1; n++;
+  });
+  sync.pending=Object.keys(sync.dirty).length;
+  if(n) schedulePush();
+}
+/* First run on a device that has never synced: adopt the current state as the
+   baseline instead of flooding the table with 100+ untouched fixtures. */
+function syncBaseline(){
+  const snap=syncSnapshot();
+  Object.keys(snap).forEach(k=>{ sync.sent[k]=JSON.stringify(snap[k]); });
+  sync.dirty={}; sync.pending=0; syncSave();
+}
+
+function syncStatus(s,note){ sync.status=s; sync.note=note||''; syncChrome(); }
+/* Repaint just the header pill — a full render would fight with what the
+   referee is doing mid-rally. */
+function syncChrome(){
+  const el=document.getElementById('syncpill');
+  if(el){ el.className='ibtn sync '+sync.status; el.innerHTML=syncPillHTML(); }
+  const st=document.getElementById('syncstat');
+  if(st){ st.className='alert '+syncAlertCls(); st.innerHTML=syncAlertHTML(); }
+}
+function syncPillHTML(){
+  const label={off:'LOCAL', sync:'SYNC…', live:'LIVE', off_line:'OFFLINE', error:'SYNC!'}[sync.status]||'LOCAL';
+  const dot=(sync.status==='live')?'<i class="dot"></i>':'';
+  return dot+label+(sync.pending?' '+sync.pending:'');
+}
+
+async function supa(path,opts){
+  const r=await fetch(SUPA_URL+path, Object.assign({
+    headers:{ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
+              'Content-Type':'application/json' } }, opts||{}));
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,120));
+  const txt=await r.text();
+  return txt?JSON.parse(txt):null;
+}
+
+/* ---------- push ---------- */
+function schedulePush(){ clearTimeout(pushTimer); pushTimer=setTimeout(syncPush,PUSH_MS); }
+
+async function syncPush(){
+  if(!sync.on||sync.busy) return;
+  const keys=Object.keys(sync.dirty); if(!keys.length) return;
+  if(!state.scorer){                                            // viewers never write
+    const snap=syncSnapshot();
+    Object.keys(snap).forEach(k=>{ sync.sent[k]=JSON.stringify(snap[k]); });
+    sync.dirty={}; sync.pending=0; syncSave(); return; }
+  sync.busy=true; syncStatus('sync');
+  const batch=keys.slice(0,60);
+  const items=batch.map(k=>({key:k, data:JSON.parse(sync.dirty[k]), rev:sync.rev[k]}));
+  try{
+    const res=await supa('/rest/v1/rpc/osl_put',{ method:'POST',
+      body:JSON.stringify({items:items, by:sync.device}) });
+    const ok={}; (res||[]).forEach(r=>ok[r.out_key]=r.out_rev);
+    batch.forEach(k=>{
+      if(ok[k]!==undefined){ sync.sent[k]=sync.dirty[k]; sync.rev[k]=ok[k]; delete sync.dirty[k]; }
+      else { delete sync.dirty[k]; }     // server holds a newer row — the pull will bring it
+    });
+    sync.pending=Object.keys(sync.dirty).length;
+    sync.lastOk=Date.now(); syncSave(); syncStatus('live');
+    if(sync.pending) schedulePush();
+  }catch(e){ syncStatus('off_line', String(e.message||e)); }
+  finally{ sync.busy=false; }
+}
+
+/* ---------- pull ---------- */
+async function syncPull(force){
+  if(!sync.on||sync.busy) return;
+  sync.busy=true; if(sync.status!=='live') syncStatus('sync');
+  try{
+    const since=(force?null:sync.cursor);
+    const q='/rest/v1/osl_live?select=key,data,rev,updated_at&order=updated_at.asc&limit=500'+
+      (since?'&updated_at=gt.'+encodeURIComponent(since):'');
+    const rows=await supa(q);
+    let changed=0, newest=sync.cursor;
+    (rows||[]).forEach(r=>{
+      if(r.key.indexOf(sync.event+':')!==0) return;
+      if(!newest||r.updated_at>newest) newest=r.updated_at;
+      if((sync.rev[r.key]||0)>=r.rev) return;                  // we hold this or newer
+      if(sync.dirty[r.key]) return;                            // our own edit is still queued
+      const parts=r.key.split(':'), kind=parts[1], id=parts.slice(2).join(':');
+      let hit=false;
+      if(kind==='m')   hit=applyMatch(id,r.data);
+      if(kind==='nom' && teamById(id)){ state.nom[id]=r.data||state.nom[id]; hit=true; }
+      if(kind==='av'  && teamById(id)){ state.avail[id]=r.data||{}; hit=true; }
+      if(!hit) return;
+      sync.rev[r.key]=r.rev; changed++;
+    });
+    sync.cursor=newest;
+    if(changed){
+      syncKnockouts();
+      try{ localStorage.setItem(STORE_KEY, JSON.stringify({ v:APP_VER, theme:state.theme,
+        scorer:state.scorer, pin:state.pin, myTeam:state.myTeam,
+        matches:state.matches, nom:state.nom, avail:state.avail })); }catch(e){}
+      const snap=syncSnapshot();                                // adopt as our baseline
+      Object.keys(snap).forEach(k=>{ if(!sync.dirty[k]) sync.sent[k]=JSON.stringify(snap[k]); });
+    }
+    sync.lastOk=Date.now(); syncSave(); syncStatus('live');
+    if(changed && !modal) render();
+  }catch(e){ syncStatus('off_line', String(e.message||e)); }
+  finally{ sync.busy=false; }
+}
+
+function syncStart(){
+  sync.on=true; syncSave(); syncStatus('sync');
+  clearInterval(pullTimer); pullTimer=setInterval(()=>syncPull(false),PULL_MS);
+  syncPull(true).then(()=>{ syncScan(); });
+}
+function syncStop(){ sync.on=false; clearInterval(pullTimer); pullTimer=null;
+  clearTimeout(pushTimer); syncSave(); syncStatus('off'); }
+
+/* Send the whole of this device's state, whatever the revisions say — for the
+   device that is seeding the event, or recovering after a wipe elsewhere. */
+async function syncPublishAll(){
+  if(!sync.on) return toast('Turn live sync on first');
+  if(!state.scorer) return toast('Scorer mode only');
+  const snap=syncSnapshot();
+  Object.keys(snap).forEach(k=>{ sync.rev[k]=(sync.rev[k]||0)+1; sync.dirty[k]=JSON.stringify(snap[k]); });
+  sync.pending=Object.keys(sync.dirty).length;
+  toast('Publishing '+sync.pending+' rows…');
+  while(Object.keys(sync.dirty).length && sync.on){ await syncPush(); await new Promise(r=>setTimeout(r,120)); }
+  toast('Published'); if(modal) openModal(settingsModal());
+}
+
+const syncAlertCls = () => sync.status==='live'?'ok':(sync.status==='off'?'warn':'bad');
+function syncAlertHTML(){
+  const ago=sync.lastOk?Math.round((Date.now()-sync.lastOk)/1000)+'s ago':'never';
+  return '<span>'+(sync.status==='live'?'●':sync.status==='off'?'○':'⚠')+'</span><span><b>'+
+    ({off:'Sync is off — this device only',sync:'Connecting…',live:'Live',
+      off_line:'No connection',error:'Sync error'}[sync.status]||'')+'</b>'+
+    (sync.on?'<br>Last exchange '+esc(ago)+
+      (sync.pending?' · '+sync.pending+' change'+(sync.pending>1?'s':'')+' waiting to send':''):'')+
+    (sync.note?'<br><span style="font-weight:400;font-size:11px">'+esc(sync.note)+'</span>':'')+'</span>';
+}
+
+function syncModal(){
+  const ago=sync.lastOk?Math.round((Date.now()-sync.lastOk)/1000)+'s ago':'never';
+  let h='<h3>Live sync</h3>'+
+    '<p class="hint" style="margin-bottom:12px">Every device with this page open shares one set of results. '+
+    'Scoring keeps working with no signal — changes queue up and go out when the connection returns.</p>';
+  h+='<div class="alert '+syncAlertCls()+'" id="syncstat">'+syncAlertHTML()+'</div>';
+  h+='<div style="margin:14px 0"><label class="fl">This device</label>'+
+     '<input type="text" id="devin" value="'+esc(sync.device)+'" placeholder="Court 1 · Ravi">'+
+     '<p class="hint">Shown against every change this device makes, so a wrong score can be traced.</p></div>';
+  h+='<div style="margin:14px 0"><label class="fl">Event code</label>'+
+     '<input type="text" id="evin" value="'+esc(sync.event)+'" placeholder="osl2026">'+
+     '<p class="hint">All devices must use the same code. Change it to run a second event without mixing results.</p></div>';
+  h+='<div class="row" style="flex-wrap:wrap;gap:7px;margin:14px 0">'+
+     (sync.on?'<button class="btn" data-syncoff="1">Turn sync off</button>'
+             :'<button class="btn pri" data-syncon="1">Turn sync on</button>')+
+     '<button class="btn sm" data-syncpull="1">Pull now</button>'+
+     '<button class="btn sm" data-syncpush="1">Publish this device</button></div>';
+  h+='<p class="hint">Only devices in <b>Scorer mode</b> send results; everyone else just receives them. '+
+     '<b>Publish this device</b> overwrites the shared copy with what is on this screen — use it to seed the event, not mid-match.</p>';
+  h+='<button class="btn pri" style="width:100%;margin-top:10px" data-close="1">Close</button>';
+  return h;
 }
 
 /* ============================ RENDER ============================ */
@@ -2097,6 +2343,7 @@ function render(){
    '<header><div class="hd"><img class="mark" src="'+LOGO+'" alt="Odyssey Sports League">'+
      '<div><h1>Odyssey Sports League</h1><div class="sub">BNI Odyssey · 2026</div></div>'+
      '<div class="sp"></div>'+
+     '<button class="ibtn sync '+sync.status+'" id="syncpill" data-syncmodal="1">'+syncPillHTML()+'</button>'+
      '<button class="ibtn'+(state.scorer?' on':'')+'" data-settings="1">'+(state.scorer?'SCORER':'VIEW')+'</button>'+
      '<button class="ibtn" data-themetog="1">'+(state.theme==='dark'?'☾':'☀')+'</button>'+
    '</div></header>'+
@@ -2119,6 +2366,15 @@ document.addEventListener('click',e=>{
 
   if((el=g('data-themetog'))){ state.theme=state.theme==='dark'?'light':'dark'; save(); return render(); }
   if(g('data-settings')) return openModal(settingsModal());
+  if(g('data-syncmodal')) return openModal(syncModal());
+  if(g('data-syncon')){ const d=$('#devin'), ev=$('#evin');
+    if(d&&d.value.trim()) sync.device=d.value.trim();
+    if(ev&&ev.value.trim()) sync.event=ev.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+    if(!Object.keys(sync.sent).length) syncBaseline();
+    syncStart(); return openModal(syncModal()); }
+  if(g('data-syncoff')){ syncStop(); return openModal(syncModal()); }
+  if(g('data-syncpull')){ syncPull(true).then(()=>openModal(syncModal())); return; }
+  if(g('data-syncpush')){ syncPublishAll(); return; }
 
   if((el=g('data-go'))){ state.tab=el.getAttribute('data-go'); state.openMatch=null; state.openTeam=null;
     const a=el.getAttribute('data-arg'); if(a) state.standSport=a; scrollTo(0,0); return render(); }
@@ -2275,8 +2531,14 @@ document.addEventListener('change',e=>{
 });
 
 /* ============================ BOOT ============================ */
+syncLoad();
 load();
 render();
+if(sync.on){ if(!Object.keys(sync.sent).length) syncBaseline(); syncStart(); }
+/* Come back from a locked screen or a backgrounded tab with the latest scores. */
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&sync.on) syncPull(false); });
+setInterval(()=>{ if(document.getElementById('syncstat')) syncChrome(); },1000);
+window.addEventListener('online',()=>{ if(sync.on){ syncPull(false); schedulePush(); } });
 </script>
 </body>
 </html>
