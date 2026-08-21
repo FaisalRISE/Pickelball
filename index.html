@@ -1144,11 +1144,11 @@ function matchRow(ref,m){
 /* ---------- Groups: rosters, courts, moves. No scoring. ---------- */
 function vGroups(){
   const canEdit=S.scorer;
-  return `<div class="expbar">
+  return (canEdit?`<div class="expbar">
       <button class="btn sm acc" onclick="openModal(shareModal('groups'))">↗ Share / PDF</button>
       <button class="btn sm" onclick="doPrint('data','teams')">Team list PDF</button>
       <button class="btn sm" onclick="doPrint('data','standings')">Standings PDF</button>
-    </div>`+
+    </div>`:'')+
     (canEdit?`<div class="note" style="margin-bottom:12px">Rename a pair, move one between groups,
       add or remove pairs, and set court names. Fixtures rebuild automatically — any pairing that still
       exists keeps the score it already had.</div>`
@@ -1213,12 +1213,12 @@ function tableCard(g,clickable){
     </tbody></table></div></div>`;
 }
 function vTable(){
-  return `<div class="expbar">
+  return (S.scorer?`<div class="expbar">
       <button class="btn sm acc" onclick="openModal(shareModal('groups'))">↗ Share / PDF</button>
       <button class="btn sm" onclick="doPrint('data','standings')">Standings PDF</button>
       <button class="btn sm" onclick="exportCSV()">Spreadsheet (CSV)</button>
-      ${S.scorer?`<button class="btn sm dgr" onclick="openModal(resetModal())">Reset scores…</button>`:''}
-    </div>`+
+      <button class="btn sm dgr" onclick="openModal(resetModal())">Reset scores…</button>
+    </div>`:'')+
     `<div class="note" style="margin-bottom:12px">Wins, then point difference, then head-to-head, then points scored.
     Top two of each group go to the <b style="color:var(--accent)">Diamond</b> bracket; third place plays
     the <b style="color:var(--gold)">Gold</b> league.</div>
@@ -1230,11 +1230,11 @@ function vFinals(){
     [['diamond','◆ Diamond'],['platinum','● Platinum'],['gold','★ Gold']].map(([k,l])=>
       `<div class="chip ${S.fin===k?'on':''}" onclick="S.fin='${k}';render()">${l}</div>`).join('')+`</div>`;
   const body=S.fin==='diamond'?vDiamond():S.fin==='platinum'?vPlatinum():vGold();
-  const bar=`<div class="expbar">
+  const bar=S.scorer?`<div class="expbar">
     <button class="btn sm acc" onclick="openModal(shareModal('finals'))">↗ Share / PDF</button>
     <button class="btn sm" onclick="doPrint('data','finals')">Save as PDF</button>
     <button class="btn sm" onclick="doPrint('blank','finals')">Blank draw sheet</button>
-    ${S.scorer?`<button class="btn sm dgr" onclick="resetScores('finals')">Reset finals scores</button>`:''}</div>`;
+    <button class="btn sm dgr" onclick="resetScores('finals')">Reset finals scores</button></div>`:'';
   return chips + modeBar() + bar + body;
 }
 function tieCard(code,x,y,label){
@@ -1373,7 +1373,7 @@ function vData(){
         <button class="btn ${S.theme==='light'?'acc':''}" onclick="if(S.theme!=='light')toggleTheme()">☀ Light</button>
       </div>
     </div>
-    <div class="card" style="padding:16px">
+${S.scorer?`    <div class="card" style="padding:16px">
       <div class="hd" style="padding:0 0 10px"><b>Export the whole tournament</b></div>
       <p class="note">Every group's fixtures, both draws and the final standings in one go.
       <b>Save as PDF</b> opens your browser's print box — pick <i>Save as PDF</i> as the destination,
@@ -1396,8 +1396,8 @@ function vData(){
         <label class="btn" style="cursor:pointer">Import backup
           <input type="file" accept="application/json" class="hidden" onchange="importJSON(this)"></label>
       </div>
-    </div>
-    <div class="card" style="padding:16px">
+    </div>`:''}
+${S.scorer?`    <div class="card" style="padding:16px">
       <div class="hd" style="padding:0 0 10px"><b>Start over</b></div>
       <p class="note"><b>Reset scores</b> clears results but keeps every pair, court and fixture,
       so the same schedule can be replayed — pick all of it, the group stage, the finals, or a single group.
@@ -1407,7 +1407,14 @@ function vData(){
         <button class="btn dgr" onclick="resetEvent()">Reset everything</button>
         <button class="btn dgr" onclick="clearPin()">Clear scoring password</button>
       </div>
-    </div>
+    </div>`:viewNote()}
+  </div>`;
+}
+function viewNote(){
+  return `<div class="card" style="padding:16px">
+    <div class="hd" style="padding:0 0 10px"><b>Viewing only</b></div>
+    <p class="note">This device is following the live scores. Printing, PDFs, sharing, backups and
+    resets belong to the scoring devices, so they are hidden here — unlock scoring above if you need them.</p>
   </div>`;
 }
 function clearPin(){
@@ -1415,11 +1422,13 @@ function clearPin(){
   S.pin=''; S.scorer=false; save(); render(); toast('Password cleared');
 }
 function exportJSON(){
+  if(!S.scorer) return toast('Scorer mode only');
   const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(b);
   a.download='pickleboss-35split-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); toast('Backup exported');
 }
 function importJSON(el){
+  if(!S.scorer) return toast('Scorer mode only');
   const f=el.files[0]; if(!f)return; const r=new FileReader();
   r.onload=e=>{try{const p=JSON.parse(e.target.result); if(!p.groups)throw 0;
     S=Object.assign(blank(),p); S.ref=null; save(); render(); toast('Backup imported');}
@@ -1430,6 +1439,7 @@ function importJSON(el){
 /* ---------- modal ---------- */
 let modalOpen=false;
 function openModal(html){
+  if(!html) return;              // a refused sheet returns nothing — show no empty shell
   modalOpen=true;
   document.getElementById('modalRoot').innerHTML=
     `<div class="scrim" onclick="if(event.target===this)closeModal()"><div class="sheetM">${html}</div></div>`;
@@ -1784,6 +1794,7 @@ function resultsText(scope){
 
 /* ---------- the share sheet ---------- */
 function shareModal(scope){
+  if(!S.scorer){ toast('Scorer mode only'); return ''; }
   scope=scope||'all';
   const label={all:'Everything',groups:'All groups',finals:'Finals only'}[scope]||('Group '+scope);
   const txt=resultsText(scope);
@@ -1839,6 +1850,7 @@ function copyShare(){
 
 /* ---------- CSV, for a spreadsheet ---------- */
 function exportCSV(){
+  if(!S.scorer) return toast('Scorer mode only');
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const rows=[['Stage','Group/Code','Match','Court','Team A','Score A','Score B','Team B','Winner']];
   GROUPS.forEach(g=>{ const G=S.groups[g];
@@ -1867,6 +1879,7 @@ function exportCSV(){
 
 /* a compact bar of export buttons, dropped into each section */
 function exportBar(scope){
+  if(!S.scorer) return '';          // a viewing device gets no export controls
   const pdfArg = scope==='all'?'':scope;
   return `<div class="expbar">
     <button class="btn sm acc" onclick="openModal(shareModal('${scope==='all'?'all':scope}'))">↗ Share / PDF</button>
@@ -2091,6 +2104,9 @@ function printHTML(withData, only){
        + (withData?standingsSheet(true):'');
 }
 function doPrint(mode, only){
+  /* printing is a scoring-device job — a viewer has no export controls at all,
+     so this is only reachable if something went wrong, or was poked at */
+  if(!S.scorer) return toast('Scorer mode only');
   document.getElementById('printArea').innerHTML = printHTML(mode==='data', only);
   window.print();
 }
