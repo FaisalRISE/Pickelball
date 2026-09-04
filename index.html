@@ -4,7 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="color-scheme" content="dark light">
-<title>Pickleboss Friyayy · 35 Split · 21 Aug 26</title>
+<title>Pickleboss Friyayy · 35 Split · 21 August 2026</title>
+<!-- WhatsApp, Slack and the rest read these from the file itself; they never run
+     the page's script, so editing the event in Setup cannot change them. Use
+     "Download a copy for uploading" on the Setup tab to rewrite them. -->
+<meta name="description" content="Live scores — Pickleboss Friyayy · 35 Split · 21 August 2026 · RISE Sports">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RISE Sports">
+<meta property="og:title" content="Pickleboss Friyayy · 35 Split · 21 August 2026">
+<meta property="og:description" content="Live scores, standings and the knockout draw.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Pickleboss Friyayy · 35 Split · 21 August 2026">
+<meta name="twitter:description" content="Live scores, standings and the knockout draw.">
+<meta name="theme-color" content="#070b16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -614,7 +626,7 @@ function blank(preset){
            draw:clone(P.draw), preset:preset||'six',
            groups:g, ko:{}, diamond:{}, platinum:{},
            tab:'courts', grp:P.groups[0], fin:'diamond', edit:false,
-           role:'view', mode:'entry', theme:'dark',
+           role:'view', mode:'entry', theme:'dark', templates:[],
            adminHash:'', scorerHash:'', open:{}, ref:null };
 }
 function load(){
@@ -622,7 +634,7 @@ function load(){
     if(p&&p.groups){ p.ko=p.ko||{}; p.diamond=p.diamond||{}; p.platinum=p.platinum||{};
       p.fin=p.fin||'diamond'; p.mode=p.mode||'entry'; p.theme=p.theme||'dark';
       p.adminHash=p.adminHash||''; p.scorerHash=p.scorerHash||'';
-      p.open=p.open||{}; p.ref=null;
+      p.open=p.open||{}; p.templates=p.templates||[]; p.ref=null;
       p.meta=p.meta||{title:EVENT_TITLE,sub:EVENT_SUB,contact:CONTACT,organiser:ORGANISER};
       if(!p.draw) p.draw=clone(PRESETS.six.draw);
       p.preset=p.preset||'six';
@@ -909,6 +921,15 @@ function signOut(){
 }
 
 /* ===================== theme ===================== */
+/* the tab title follows the event; the preview tags cannot, see the note in <head> */
+function applyDocTitle(){
+  const t=(S.meta.title||'')+(S.meta.sub?' · '+S.meta.sub:'');
+  if(document.title!==t) document.title=t;
+  const set=(sel,v)=>{const el=document.querySelector(sel); if(el) el.setAttribute('content',v);};
+  set('meta[property="og:title"]',t); set('meta[name="twitter:title"]',t);
+  set('meta[property="og:site_name"]',S.meta.organiser||'');
+  set('meta[name="theme-color"]',S.theme==='light'?'#f6f7fb':'#070b16');
+}
 function applyTheme(){ document.documentElement.setAttribute('data-theme', S.theme); }
 function toggleTheme(){ S.theme = S.theme==='dark'?'light':'dark'; applyTheme(); save(); render(); }
 /* ===================== match addressing =====================
@@ -1237,6 +1258,7 @@ function validTab(){
 function render(){
   const keep=grabFocus();
   applyTheme(); refresh(); validTab(); save();
+  applyDocTitle();
   const views={courts:vCourts,fixtures:vFixtures,table:vTable,
                finals:vFinals,groups:vGroups,setup:vSetup,data:vData};
   if(!views[S.tab]||(S.tab==='setup'&&!isAdmin())) S.tab='courts';
@@ -1755,6 +1777,7 @@ const K_G  = g => sync.event+':g:'+g;                 // whole group {court,team
 const K_T  = c => sync.event+':t:'+c;                 // a KO/Gold tie score {sa,sb}
 const K_L  = (w,i) => sync.event+':l:'+w+':'+i;       // a league match score {sa,sb}
 const K_CFG= () => sync.event+':cfg';                 // passwords {adminHash,scorerHash}
+const K_TPL= () => sync.event+':tpl';                 // the organiser's saved formats
 const K_FMT= () => sync.event+':fmt';                 // the format {meta,draw,groupKeys}
 
 function groupPayload(g){ const G=S.groups[g];
@@ -1773,6 +1796,8 @@ function syncSnapshot(){
   /* only ever publish a password that exists — an empty one must not be able to
      travel and unlock the event on everybody else's device */
   if(S.adminHash||S.scorerHash) o[K_CFG()]={ adminHash:S.adminHash||'', scorerHash:S.scorerHash||'' };
+  /* saved formats follow the organiser between their own devices */
+  if((S.templates||[]).length) o[K_TPL()]={ list:S.templates };
   o[K_FMT()]={ meta:S.meta, draw:S.draw, groupKeys:GROUPS.slice() };
   GROUPS.forEach(g=>{ o[K_G(g)]=groupPayload(g); });
   TIE_CODES().forEach(c=>{ o[K_T(c)]=tiePayload(c); });
@@ -1785,6 +1810,15 @@ function syncSnapshot(){
 /* The event password arriving from another device. A scorer already unlocked
    here is left alone — losing access mid-match because the organiser changed
    the password would be worse than the alternative. */
+/* Saved formats are inert reference data, so the newest list simply wins. */
+function applyTpl(d){
+  const list=(d&&Array.isArray(d.list))?d.list:null;
+  if(!list) return false;
+  if(JSON.stringify(list)===JSON.stringify(S.templates||[])) return false;
+  S.templates=list;
+  try{ localStorage.setItem(STORE_KEY,JSON.stringify(Object.assign({},S,{ref:null}))); }catch(e){}
+  return true;
+}
 function applyCfg(d){
   if(!d) return false;
   let hit=false;
@@ -1934,6 +1968,10 @@ async function syncPull(force){
         if(applyFmt(r.data)){ sync.rev[r.key]=r.rev; sync.sent[r.key]=remoteStr; changed++; }
         return;
       }
+      if(kind==='tpl'){
+        if(applyTpl(r.data)){ sync.rev[r.key]=r.rev; sync.sent[r.key]=remoteStr; changed++; }
+        return;
+      }
       if(kind==='cfg'){
         if(applyCfg(r.data)){ sync.rev[r.key]=r.rev; sync.sent[r.key]=remoteStr; changed++; }
         return;
@@ -1994,8 +2032,10 @@ function syncAlertHTML(){
 }
 async function resetEvent(){
   if(!confirm('Reset everything to the original team list?'+(sync.on?' This clears the other devices too.':''))) return;
+  /* saved formats belong to the organiser, not to this tournament, so a reset
+     of the event must never take them with it */
   const keep={role:S.role,adminHash:S.adminHash,scorerHash:S.scorerHash,theme:S.theme,mode:S.mode,open:S.open,
-    meta:S.meta,draw:S.draw,preset:S.preset};
+    meta:S.meta,draw:S.draw,preset:S.preset,templates:S.templates};
   const g=clone(S.groups);
   S=Object.assign(blank(S.preset),keep);
   Object.keys(g).forEach(k=>{ S.groups[k]={court:g[k].court,teams:g[k].teams.slice(),matches:buildMatches(g[k].teams)}; });
@@ -2388,7 +2428,200 @@ function vSetup(){
   const locked=koLocked();
   return `<div class="note" style="margin-bottom:12px">Everything on this page syncs to the other
     devices. ${locked?'<b style="color:var(--gold)">Knockout scores exist</b>, so changing the draw now would strand them — clear the finals scores first if you really need to.':''}</div>`
-    +setupEvent()+setupGroups()+setupDraw(locked)+setupPresets();
+    +setupEvent()+setupPreview()+setupGroups()+setupDraw(locked)+setupPresets()+setupTemplates();
+}
+
+
+
+/* ========================================================================
+   SAVED FORMATS
+   A format is the shape of a tournament with none of its content: how many
+   groups, what the courts are called, and the whole knockout draw. Pairs,
+   scores and the event name are deliberately left out, so last season's
+   structure can be reused for a completely different Friday.
+   ===================================================================== */
+function formatShape(){
+  return {
+    groups: GROUPS.map(g=>({key:g, court:S.groups[g].court})),
+    draw: clone(S.draw)
+  };
+}
+function shapeSummary(sh){
+  const rounds=(sh.draw.rounds||[]).map(r=>r.label+' ×'+r.ties.length).join(' → ');
+  const lg=[];
+  if((sh.draw.diamond||[]).length) lg.push('Diamond '+(sh.draw.diamond.length===2?'final':sh.draw.diamond.length+'-way'));
+  if((sh.draw.platinum||[]).length) lg.push('Platinum '+(sh.draw.platinum.length===2?'final':sh.draw.platinum.length+'-way'));
+  if((sh.draw.gold||[]).length) lg.push('Gold ×'+sh.draw.gold.length);
+  return sh.groups.length+' groups · '+(rounds||'no rounds')+(lg.length?' · '+lg.join(', '):'');
+}
+function saveTemplate(){
+  if(!isAdmin()) return toast('Organiser only');
+  openModal(`<h3>Save this format</h3>
+    <p class="hint">Stores the group layout, the court names and the whole knockout draw under a name
+    you choose. Pairs, scores and the event name are not included, so it can be reused for any event.</p>
+    <label class="fl">Name it</label>
+    <input type="text" id="tplName" placeholder="e.g. Friday 6-group 35 Split"
+      onkeydown="if(event.key==='Enter')commitTemplate()">
+    <p class="hint">Currently: ${esc(shapeSummary(formatShape()))}</p>
+    <div class="row" style="margin-top:16px">
+      <button class="btn acc" style="flex:1" onclick="commitTemplate()">Save format</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+function commitTemplate(){
+  const nm=(document.getElementById('tplName').value||'').trim();
+  if(!nm) return toast('Give it a name first');
+  S.templates=S.templates||[];
+  const existing=S.templates.find(t=>t.name.toLowerCase()===nm.toLowerCase());
+  if(existing && !confirm('“'+nm+'” already exists. Replace it?')) return;
+  const rec={ id:'t'+Date.now().toString(36), name:nm,
+              saved:new Date().toISOString().slice(0,10), shape:formatShape() };
+  if(existing) S.templates[S.templates.indexOf(existing)]=rec;
+  else S.templates.unshift(rec);
+  save(); closeModal(); render(); toast('Saved as “'+nm+'”');
+  if(sync.on) drainQueue(6);
+}
+function applyTemplate(id){
+  if(!isAdmin()) return toast('Organiser only');
+  const t=(S.templates||[]).find(x=>x.id===id); if(!t) return;
+  const keep=t.shape.groups.map(g=>g.key);
+  const losing=GROUPS.filter(g=>keep.indexOf(g)<0 && S.groups[g].teams.length);
+  let warn='Apply “'+t.name+'”?\n\n'+shapeSummary(t.shape)+
+    '\n\nThe draw is replaced and knockout scores are cleared. Pairs stay wherever their group still exists.';
+  if(losing.length) warn+='\n\nGroup '+losing.join(', ')+' would be removed along with the pairs in them.';
+  if(!confirm(warn)) return;
+  const old=clone(S.groups);
+  S.groups={};
+  t.shape.groups.forEach((g,i)=>{
+    const prev=old[g.key], teams=prev?prev.teams.slice():[];
+    S.groups[g.key]={ court:g.court||(prev?prev.court:'Court '+(i+1)),
+                      teams, matches:buildMatches(teams, prev?prev.matches:null) };
+  });
+  S.draw=clone(t.shape.draw); S.preset='';
+  S.ko={}; S.diamond={}; S.platinum={};
+  syncGroupKeys(); if(!S.groups[S.grp]) S.grp=GROUPS[0];
+  save(); render(); toast('“'+t.name+'” applied');
+  if(sync.on) drainQueue(6);
+}
+function renameTemplate(id){
+  const t=(S.templates||[]).find(x=>x.id===id); if(!t) return;
+  const nm=prompt('Rename this format', t.name);
+  if(nm===null) return;
+  if(!nm.trim()) return toast('Name cannot be empty');
+  t.name=nm.trim(); save(); render();
+  if(sync.on) drainQueue(6);
+}
+function deleteTemplate(id){
+  const t=(S.templates||[]).find(x=>x.id===id); if(!t) return;
+  if(!confirm('Delete the saved format “'+t.name+'”? The tournament in progress is untouched.')) return;
+  S.templates=S.templates.filter(x=>x.id!==id);
+  save(); render(); toast('Deleted');
+  if(sync.on) drainQueue(6);
+}
+function setupTemplates(){
+  const list=S.templates||[];
+  return `<div class="card" style="padding:16px;margin-bottom:12px">
+    <div class="hd" style="padding:0 0 8px"><b>Saved formats</b>
+      <span style="color:var(--dim);font-size:11px">${list.length||'none'} saved</span></div>
+    <p class="note">Keep the shape of a tournament — groups, courts and the full draw — under a name,
+    and start from it next time instead of rebuilding the draw by hand.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn acc" onclick="saveTemplate()">💾 Save current setup as a format</button>
+    </div>
+    ${list.length?`<div style="margin-top:14px">`+list.map(t=>`
+      <div class="rsRow">
+        <div style="min-width:0">
+          <div class="rsT">${esc(t.name)}</div>
+          <div class="rsN">${esc(shapeSummary(t.shape))} · saved ${esc(t.saved)}</div>
+        </div>
+        <span class="row" style="gap:6px;flex-wrap:nowrap">
+          <button class="btn sm acc" onclick="applyTemplate('${t.id}')">Use</button>
+          <button class="btn sm" onclick="renameTemplate('${t.id}')">Rename</button>
+          <button class="btn sm dgr" onclick="deleteTemplate('${t.id}')">Delete</button>
+        </span>
+      </div>`).join('')+`</div>`
+      :`<p class="hint" style="margin-top:12px">Nothing saved yet. Build the draw the way you want it,
+        then save it here.</p>`}
+  </div>`;
+}
+
+/* ---------- the link preview ----------
+   WhatsApp fetches the raw file and reads its <title> and og: tags. It never
+   runs the script, so nothing edited here can reach it — those tags have to be
+   inside the file that is uploaded. Rather than ask anyone to hand-edit HTML,
+   the app fetches its own source, rewrites the tags and the built-in defaults,
+   and hands back a file ready to replace the one on GitHub. */
+function previewLine(){
+  return (S.meta.title||'')+(S.meta.sub?' · '+S.meta.sub:'');
+}
+function setupPreview(){
+  const t=previewLine();
+  const stale=(document.querySelector('meta[property="og:title"]')||{}).dataset;
+  return `<div class="card" style="padding:16px;margin-bottom:12px">
+    <div class="hd" style="padding:0 0 8px"><b>Link preview &amp; browser tab</b></div>
+    <p class="note">The tab now reads <b>${esc(t)}</b>. The preview WhatsApp shows is different:
+    it is read straight out of the uploaded file, so editing the event here cannot change it.
+    Download a copy with the details written in, replace the file on GitHub, and the preview follows.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn acc" onclick="downloadBranded()">Download a copy for uploading</button>
+      <button class="btn" onclick="copyHeadTags()">Copy the tags instead</button>
+    </div>
+    <p class="hint" style="margin-top:10px">WhatsApp remembers a preview for a long while. After
+    uploading, share the link with something on the end — <b>?v=2</b> — and it fetches it again.</p>
+  </div>`;
+}
+function headTags(){
+  const t=previewLine(), d='Live scores, standings and the knockout draw.';
+  return `<title>${t}</title>\n`+
+    `<meta name="description" content="Live scores — ${t} · ${S.meta.organiser}">\n`+
+    `<meta property="og:type" content="website">\n`+
+    `<meta property="og:site_name" content="${S.meta.organiser}">\n`+
+    `<meta property="og:title" content="${t}">\n`+
+    `<meta property="og:description" content="${d}">\n`+
+    `<meta name="twitter:card" content="summary">\n`+
+    `<meta name="twitter:title" content="${t}">\n`+
+    `<meta name="twitter:description" content="${d}">`;
+}
+function copyHeadTags(){
+  const ta=document.createElement('textarea');
+  ta.value=headTags(); ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  toast(ok?'Tags copied — paste them into the file\u2019s <head>':'Could not copy here');
+}
+const q=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function downloadBranded(){
+  if(!isAdmin()) return toast('Organiser only');
+  const t=previewLine(), d='Live scores, standings and the knockout draw.';
+  try{
+    const res=await fetch(location.origin+location.pathname,{cache:'reload'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    let html=await res.text();
+    if(html.indexOf('<title>')<0) throw new Error('not the app file');
+    html=html.replace(/<title>[\s\S]*?<\/title>/, '<title>'+q(t)+'</title>');
+    const meta=(attr,name,val)=>{
+      const re=new RegExp('(<meta '+attr+'="'+name+'" content=")[^"]*(")');
+      html=html.replace(re,'$1'+q(val)+'$2');
+    };
+    meta('property','og:title',t);      meta('name','twitter:title',t);
+    meta('property','og:description',d);meta('name','twitter:description',d);
+    meta('property','og:site_name',S.meta.organiser);
+    meta('name','description','Live scores — '+t+' · '+S.meta.organiser);
+    /* bake the defaults too, so a brand-new phone opens on the right event */
+    const esc1=v=>String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html=html.replace(/const EVENT_TITLE = '[^']*';/, "const EVENT_TITLE = '"+esc1(S.meta.title)+"';");
+    html=html.replace(/const EVENT_SUB   = '[^']*';/, "const EVENT_SUB   = '"+esc1(S.meta.sub)+"';");
+    html=html.replace(/const ORGANISER   = '[^']*';/, "const ORGANISER   = '"+esc1(S.meta.organiser)+"';");
+    html=html.replace(/const CONTACT     = '[^']*';/, "const CONTACT     = '"+esc1(S.meta.contact)+"';");
+    html=html.replace(/const BUILD = '[^']*';/, "const BUILD = 'build "+new Date().toISOString().slice(0,10)+"';");
+    const blob=new Blob([html],{type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='index.html'; a.click();
+    toast('Downloaded — upload this as index.html');
+  }catch(e){
+    toast('Could not read the file here — use “Copy the tags instead”');
+  }
 }
 
 /* ---------- event name, date, contact ---------- */
